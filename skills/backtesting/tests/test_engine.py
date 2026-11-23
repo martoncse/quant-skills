@@ -69,3 +69,20 @@ def test_trim_warmup_drops_leading_flat_days():
     w.iloc[2] = [0.5, 0.5]
     trimmed = run_backtest(w, close).trim_warmup()
     assert trimmed.returns.index[0] == close.index[2]
+
+
+def test_trades_match_turnover():
+    close = _prices()
+    w = pd.DataFrame(np.nan, index=close.index, columns=close.columns)
+    w.iloc[0] = [0.5, 0.5]
+    w.iloc[2] = [1.0, 0.0]
+    res = run_backtest(w, close)
+    tr = res.trades()
+    assert set(tr["date"]) == {close.index[0], close.index[2]}
+    by_day = tr.groupby("date")["traded"].apply(lambda s: s.abs().sum())
+    np.testing.assert_allclose(by_day.to_numpy(), res.turnover[res.turnover > 0].to_numpy())
+    # trades measured from the drifted book, not the stale target
+    day2 = tr[tr["date"] == close.index[2]].set_index("ticker")
+    assert day2.loc["A", "before"] == pytest.approx(
+        res.weights.iloc[1]["A"] * 0.9 / (1 + res.gross_returns.iloc[2])
+    )

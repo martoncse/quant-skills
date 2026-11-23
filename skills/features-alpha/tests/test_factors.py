@@ -53,3 +53,12 @@ def test_zscore_is_standardised(close):
 def test_compute_factors_rejects_unknown(close):
     with pytest.raises(KeyError):
         compute_factors(close, ["value"])
+
+
+def test_indicators_have_no_lookahead(close):
+    from quantskills.features import ema, sma
+
+    assert_no_lookahead(lambda c: sma(c, 50), close)
+    assert_no_lookahead(lambda c: ema(c, 20), close)
+    s = sma(close, 3)
+    assert s.iloc[2, 0] == pytest.approx(close.iloc[:3, 0].mean())

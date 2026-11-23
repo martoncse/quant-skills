@@ -81,3 +81,24 @@ def test_wide_long_roundtrip():
 def test_survivorship_warning():
     with pytest.warns(SurvivorshipBiasWarning):
         survivorship_warning()
+
+
+def test_quote_table_and_detail():
+    from quantskills.data import period_window, quote_detail, quote_table
+
+    df = synthetic_prices(n_assets=3, n_days=300, seed=2)
+    close = to_wide(df)
+    q = quote_table(df)
+    assert list(q.index) == list(close.columns)
+    t = "SYN01"
+    assert q.loc[t, "last"] == pytest.approx(close[t].iloc[-1])
+    assert q.loc[t, "change_pct"] == pytest.approx(close[t].iloc[-1] / close[t].iloc[-2] - 1)
+    assert q.loc[t, "high_52w"] == pytest.approx(close[t].iloc[-252:].max())
+    d = quote_detail(df, t)
+    assert d["ret_1M"] == pytest.approx(close[t].iloc[-1] / close[t].iloc[-21] - 1)
+    with pytest.raises(KeyError):
+        quote_detail(df, "NOPE")
+    assert len(period_window(close, "3M")) == 63
+    assert len(period_window(close, "max")) == 300
+    with pytest.raises(ValueError):
+        period_window(close, "7Y")

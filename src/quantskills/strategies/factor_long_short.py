@@ -29,6 +29,8 @@ from quantskills.strategies.base import Strategy
 
 
 class FactorLongShort(Strategy):
+    """Long top / short bottom quantile of an IC-weighted blend of price factors."""
+
     name = "factor-long-short"
 
     @classmethod

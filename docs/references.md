@@ -37,11 +37,12 @@ Skills map: `data-loading` → ch. 2; `features-alpha` → ch. 7–8; `backtesti
 | pyarrow | parquet cache | Apache-2.0 |
 | yfinance | free price data | Apache-2.0 |
 | matplotlib | figures | PSF-based (matplotlib license) |
+| textual, textual-plotext, plotext | terminal UI | MIT |
 | pytest, ruff, mypy, nbconvert | dev | MIT / MIT / MIT / BSD-3 |
 
 Planned (later phases, not yet installed): scikit-learn (BSD), lightgbm (MIT),
 statsmodels (BSD), arch (NCSA), PyPortfolioOpt (MIT), quantstats (Apache-2.0),
-pymc (Apache-2.0), textual (MIT), vectorbt (Apache-2.0 + Commons Clause, so check it before use).
+pymc (Apache-2.0), vectorbt (Apache-2.0 + Commons Clause, so check it before use).
 
 ## Inspiration only
 - awesome-quant (wilsonfreitas): the library landscape

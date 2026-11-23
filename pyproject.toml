@@ -12,7 +12,12 @@ dependencies = [
     "pyarrow>=14",
     "yfinance>=0.2.40",
     "matplotlib>=3.8",
+    "textual>=0.80",
+    "textual-plotext>=1.0",
 ]
+
+[project.scripts]
+qs-terminal = "quantskills.terminal.app:main"
 
 [dependency-groups]
 dev = [

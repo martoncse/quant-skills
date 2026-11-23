@@ -45,6 +45,7 @@ class BacktestResult:
     turnover: pd.Series
     weights: pd.DataFrame  # post-trade weights at each close
     cost_model: CostModel
+    pre_trade_weights: pd.DataFrame | None = None  # drifted weights just before trading
 
     @property
     def equity(self) -> pd.Series:
@@ -73,7 +74,36 @@ class BacktestResult:
             turnover=self.turnover[mask],
             weights=self.weights[mask],
             cost_model=self.cost_model,
+            pre_trade_weights=(
+                None if self.pre_trade_weights is None else self.pre_trade_weights[mask]
+            ),
         )
+
+    def trades(self, min_size: float = 1e-9) -> pd.DataFrame:
+        """One row per (date, ticker) trade: weight before, after, and amount traded.
+
+        ``before`` is the drifted weight just before the trade, so ``traded``
+        matches what the cost model charged.
+        """
+        before_w = self.pre_trade_weights
+        if before_w is None:
+            before_w = self.weights.shift(1).fillna(0.0)
+        delta = self.weights - before_w
+        active = self.turnover > min_size
+        cols = ["date", "ticker", "before", "after", "traded"]
+        if not active.any():
+            return pd.DataFrame(columns=cols)
+        d = delta[active].stack()
+        d = d[d.abs() > min_size]
+        out = pd.DataFrame(
+            {
+                "before": before_w[active].stack().reindex(d.index),
+                "after": self.weights[active].stack().reindex(d.index),
+                "traded": d,
+            }
+        )
+        out.index.names = ["date", "ticker"]
+        return out.reset_index()[cols]
 
 
 def run_backtest(
@@ -92,6 +122,7 @@ def run_backtest(
     n_days, n_assets = tgt.shape
     held = np.zeros(n_assets)  # weights held over (t-1, t]
     post = np.zeros((n_days, n_assets))
+    pre = np.zeros((n_days, n_assets))
     gross = np.zeros(n_days)
     turnover = np.zeros(n_days)
 
@@ -102,6 +133,7 @@ def run_backtest(
         drifted = held * (1.0 + r) / (1.0 + g) if (1.0 + g) > 0 else np.zeros(n_assets)
         new = np.nan_to_num(tgt[t], nan=0.0) if rebalance[t] else drifted
         turnover[t] = float(np.abs(new - drifted).sum())
+        pre[t] = drifted
         post[t] = new
         held = new
 
@@ -114,4 +146,5 @@ def run_backtest(
         turnover=pd.Series(turnover, index=idx, name="turnover"),
         weights=pd.DataFrame(post, index=idx, columns=close.columns),
         cost_model=costs,
+        pre_trade_weights=pd.DataFrame(pre, index=idx, columns=close.columns),
     )

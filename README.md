@@ -15,7 +15,18 @@ uv run pytest                                                  # offline, about 
 uv run python skills/backtesting/scripts/run_backtest.py       # strategy #1 on synthetic data
 uv run python skills/evaluation/scripts/select_and_deflate.py  # sweep → deflated Sharpe → hold-out
 uv run python skills/data-loading/scripts/fetch.py --tickers SPY QQQ IWM  # real data into data/
+uv run qs-terminal --demo                                      # the terminal, on synthetic data
 ```
+
+## QS Terminal
+
+A keyboard-driven research terminal (Textual): watchlist, quotes, charts,
+a strategy lab that backtests in a background worker, and a results view with
+in-sample vs hold-out metrics, equity, drawdown and the trade list. Type `HELP`
+inside it, or see [docs/terminal.md](docs/terminal.md).
+
+![QS Terminal watchlist](docs/img/terminal-watchlist.png)
+![QS Terminal backtest results](docs/img/terminal-results.png)
 
 ## What's different
 - **Costs on by default** (5 + 5 bps). Weights drift between rebalances and turnover is charged on the drifted book.
@@ -53,7 +64,7 @@ the lesson of strategy #1. See the write-up.
 ## Build checklist
 
 - [x] **Phase 1: Foundation:** scaffold, CI, data-loading, backtesting, evaluation, `Strategy` interface, strategy #1
-- [ ] Phase 2: Terminal MVP (Textual): command bar, watchlist, chart, strategy lab, results
+- [x] **Phase 2: Terminal MVP:** command bar, watchlist, quote, chart, strategy lab, results (`uv run qs-terminal`)
 - [ ] Phase 3: Strategies #2–#7, portfolio-risk, risk screen
 - [ ] Phase 4: Robustness module + screen + write-up
 - [ ] Phase 5: Strategies #8–#10 (`dl` extra), stretch #11–#12
