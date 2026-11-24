@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from quantskills.data import load_cached, synthetic_prices
+from quantskills.data import attach_news, load_cached, synthetic_news, synthetic_prices
 from quantskills.strategies import StrategyRun
 
 EMPTY_CACHE_MESSAGE = (
@@ -30,11 +30,13 @@ class TerminalState:
         """Load ``"cache"`` (offline parquet cache) or ``"demo"`` (synthetic)."""
         source = source.lower()
         if source == "demo":
-            self.prices = synthetic_prices(
-                n_assets=30, n_days=1260, seed=0, n_pairs=3, garch_index=True
-            )
+            prices = synthetic_prices(n_assets=30, n_days=1260, seed=0, n_pairs=3, garch_index=True)
+            # Synthetic headlines ride along for the text strategy (#8).
+            self.prices = attach_news(prices, synthetic_news(prices, seed=0))
             self.source = "demo"
-            self.message = "Synthetic demo data: illustrations only, not market data."
+            self.message = (
+                "Synthetic demo prices and headlines: illustrations only, not market data."
+            )
         elif source == "cache":
             try:
                 self.prices = load_cached(self.cache_dir)

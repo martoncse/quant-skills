@@ -3,7 +3,8 @@
 uv run python skills/evaluation/scripts/strategy_gallery.py
 uv run python skills/evaluation/scripts/strategy_gallery.py --figures   # also save PNGs
 
-Panel: 30 one-factor stocks + 3 cointegrated pairs + a GARCH index (seed 0),
+Panel: 30 one-factor stocks + 3 cointegrated pairs + a GARCH index (seed 0) with
+synthetic headlines attached (strategy #8),
 last 30% held out, 5 + 5 bps costs. Prints a markdown table for the README.
 
 Honesty note: N=1 per strategy here, but the defaults were chosen while
@@ -14,7 +15,7 @@ Results are illustrations of the pipeline, not evidence about markets.
 import argparse
 from pathlib import Path
 
-from quantskills.data import synthetic_prices
+from quantskills.data import synthetic_prices_with_news
 from quantskills.eval import bayesian_sharpe, plot_tear_sheet, tear_sheet
 from quantskills.strategies import STRATEGIES, run_strategy
 from quantskills.utils import holdout_date
@@ -28,7 +29,7 @@ def main() -> None:
     p.add_argument("--figures", action="store_true", help="save equity PNGs under strategies/")
     a = p.parse_args()
 
-    prices = synthetic_prices(seed=a.seed, n_pairs=3, garch_index=True)
+    prices = synthetic_prices_with_news(seed=a.seed)  # same prices + headlines for #8
     train_end = holdout_date(prices.index.get_level_values("date"), 0.3)
     print(f"train <= {train_end.date()}, costs 10 bps\n")
     print(

@@ -7,14 +7,15 @@ uv run python skills/backtesting/scripts/run_backtest.py --strategy pairs-coint 
     --data synthetic-plus
 
 ``synthetic-plus`` adds 3 cointegrated pairs and a GARCH-volatility index (``IDX``)
-to the synthetic panel, so the pairs and volatility-timing strategies have something to find.
+to the synthetic panel, so the pairs and volatility-timing strategies have something to find,
+and attaches synthetic headlines for the text strategy (#8).
 """
 
 import argparse
 import ast
 
 from quantskills.backtest import CostModel
-from quantskills.data import load_cached, synthetic_prices
+from quantskills.data import load_cached, synthetic_prices, synthetic_prices_with_news
 from quantskills.eval import format_tear_sheet, plot_tear_sheet, tear_sheet
 from quantskills.strategies import STRATEGIES, get_strategy, run_strategy
 from quantskills.utils import holdout_date
@@ -44,7 +45,7 @@ def main() -> None:
     if a.data == "cache":
         prices = load_cached()
     elif a.data == "synthetic-plus":
-        prices = synthetic_prices(seed=a.seed, n_pairs=3, garch_index=True)
+        prices = synthetic_prices_with_news(seed=a.seed)
     else:
         prices = synthetic_prices(seed=a.seed)
     train_end = holdout_date(prices.index.get_level_values("date"), a.test_fraction)

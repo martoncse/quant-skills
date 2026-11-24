@@ -28,7 +28,7 @@ without touching the hold-out (3.47 → 0.34).
 
 ![terminal robustness screen](img/terminal-robust.png)
 
-## Results: all seven strategies
+## Results: all ten strategies
 
 `uv run python skills/robustness/scripts/robustness_report.py --all --figures`
 
@@ -41,6 +41,9 @@ without touching the hold-out (3.47 → 0.34).
 | 5 | `bayes-pairs` | **AMBER** | 0.976 | 0.65 / 0.01 | 1.03 | 0.88 | 2.87 → 2.21 | 1.10 |
 | 6 | `gbm-long-short` | **RED** | 0.381 | 0.58 / 0.20 | — | — | 3.47 → 0.34 | 0.21 |
 | 7 | `unsupervised-risk` | **RED** | 0.847 | 0.81 / 0.14 | 1.03 | 0.98 | 0.56 → 0.85 | -0.60 |
+| 8 | `text-sentiment` | **RED** | 0.817 | 0.77 / 0.10 | 1.32 | 0.37 | 2.11 → 1.10 | -0.28 |
+| 9 | `dl-forecast` | **RED** | 0.595 | 0.65 / 0.31 | 1.18 | 0.94 | 0.58 → 0.73 | -0.24 |
+| 10 | `cond-autoencoder` | **RED** | 0.016 | 0.61 / 0.88 | — | — | 1.19 → -0.73 | -0.99 |
 
 PBO is shown with P(loss), the chance the in-sample winner loses money out of sample.
 "Kept" is the share of the walk-forward Sharpe left after the perturbation. The hold-out
@@ -65,6 +68,11 @@ column is the same number as in the README gallery.
    neighbouring configs behave alike: picking the in-sample best of nine similar
    configs is close to a coin flip. P(loss) separates "harmless plateau" (bayes-pairs:
    0.01; vol timing: 0.07) from "the winner often loses" (linear forecast: 0.29).
+5. **The newer models (#8–#10) are all red, each for a reason you can see in the
+   training window.** News sentiment (#8) dies with a day's delay: news is priced fast.
+   The deep-learning forecast (#9) barely fits and its grid is unstable. The conditional
+   autoencoder (#10) already loses walk-forward. Its 1.19 in-sample Sharpe is factor premia
+   scored on the window they were estimated from.
 
 ## The checks
 
@@ -144,6 +152,35 @@ The noise, delay and sensitivity grades are ratios against the walk-forward Shar
 that base is below 0.5 they show `n/a`, because a ratio against a near-zero Sharpe is noise
 (LightGBM: "1.92 kept"). A weak strategy is already flagged by its DSR.
 
+### Adversarial text
+For news-driven strategies (`uses_news = True`, so #8). Fit the sentiment model on clean
+headlines from the first 60% of the training window, then score the remaining 40% with
+an **attacked live feed** (half the headlines hit, or half as many again added):
+
+| Attack | What changes | Meaning for a human |
+|---|---|---|
+| paraphrase | "misses estimates" → "fails to beat estimates" | same |
+| synonyms | "beats" → "tops", "cuts" → "trims" (words unseen in training) | same |
+| typos | one swapped letter per tone word ("upgarded") | same |
+| pump | fake headlines: "SYN07 set to surge, strong buy" | added noise |
+
+| Attack | TF-IDF Sharpe (kept) | Lexicon Sharpe (kept) |
+|---|---|---|
+| none | 1.00 | 1.92 |
+| paraphrase | 0.66 (0.66) | 1.92 (1.00) |
+| synonyms | 1.02 (1.02) | 1.49 (0.77) |
+| typos | 1.00 (1.00) | 1.51 (0.79) |
+| pump | 1.63 (1.63) | **0.01 (0.01)** |
+
+The two models fail in opposite places. The lexicon's negation rule handles
+paraphrase, but it reads pump spam ("surge", "strong") as good news and its edge
+vanishes. TF-IDF never saw the spam's words, so it ignores them. (That pump *raised* its
+Sharpe is luck: the spam changed which stocks counted as having recent news.) But it
+learned "beats" and "misses" more than it learned negation, so paraphrase costs it a
+third. Synonyms and typos barely move it, because context words ("guidance", "flagship
+product") still give the tone away. Real text is less tidy. Graded on the worst attack:
+green ≥ 0.75 kept, amber ≥ 0.4.
+
 ### Calibration
 For models that output probabilities. Brier score, log loss, the Murphy decomposition
 (reliability, resolution) and expected calibration error (ECE), all on **walk-forward**
@@ -170,6 +207,7 @@ All in `THRESHOLDS` in `src/quantskills/robustness/verdict.py`:
 | Price noise 25 bps (kept) | ≥ 0.75 | ≥ 0.40 | 25 bps is a realistic data error for daily closes |
 | 1-day delay (kept) | ≥ 0.75 | ≥ 0.40 | a day of slippage in execution should not halve the edge |
 | Worst regime Sharpe | ≥ 0 | ≥ -1 | see above |
+| Adversarial text (worst attack, kept) | ≥ 0.75 | ≥ 0.40 | as for noise: meaning-preserving edits should not halve the edge |
 | Walk-forward / in-sample, hold-out / in-sample | ≥ 0.5 | ≥ 0 | half the Sharpe surviving is a typical healthy decay |
 
 The overall verdict is the worst graded check. These are judgement calls, kept in one
@@ -187,8 +225,8 @@ place so they are easy to audit and change.
   should pass its real trial count via `n_trials`.
 - **Synthetic data.** The planted effects (momentum drift, cointegrated pairs, GARCH
   volatility) are simple and stationary. Real markets are neither.
-- **Not yet covered:** adversarial stress tests for text/sentiment signals arrive with
-  strategy #8 (Phase 5).
+- **Synthetic news is tidy.** Real headlines are messier and more varied, so expect the
+  adversarial-text results to be optimistic for TF-IDF.
 
 ## Reproduce
 

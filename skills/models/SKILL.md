@@ -1,11 +1,12 @@
 ---
 name: models
-description: Fit and cross-validate ML return models on (date, ticker) panels with purged, embargoed CV; LightGBM with SHAP.
+description: Fit and validate ML return models on (date, ticker) panels without leaking the future: purged CV, LightGBM + SHAP, text sentiment, PyTorch nets.
 ---
 
 ## When to use
-When a strategy learns a mapping from features to future returns (strategies #2
-and #6), and you need to choose hyperparameters without leaking the future.
+When a strategy learns a mapping from features, text or raw return sequences to future
+returns (strategies #2, #6, #8, #9, #10), and you need to choose hyperparameters
+without leaking the future.
 
 ## Inputs / outputs
 - `feature_panel(close, names) -> DataFrame`: long `(date, ticker)`, one column per
@@ -23,6 +24,11 @@ and #6), and you need to choose hyperparameters without leaking the future.
 - `fit_lgbm_cv(X, y, params, max_rounds, ...) -> (booster, report)`: rounds chosen
   by early stopping per purged fold (median), then refit on all rows.
 - `shap_importance(booster, X) -> Series`: mean |SHAP| via LightGBM's TreeSHAP.
+- Text (`models/text.py`): `lexicon_score(text)` (with negation), `news_labels(news,
+  prices, horizon)`, `fit_tfidf(headlines, labels)`, `score_headlines(model, headlines)`.
+- Neural nets (`models/nn.py`, needs `uv sync --extra dl`): `make_sequence_net(arch)`
+  for `mlp` / `cnn` / `lstm`, `train_early_stopping(model, step, validate)`,
+  `require_torch()` (clear message when PyTorch is missing), `torch_available()`.
 
 ## Steps
 1. Build `X` and `y` from the **training window only**: `dropna_xy(feature_panel(c), label_panel(c, 21))`.
@@ -42,8 +48,17 @@ and #6), and you need to choose hyperparameters without leaking the future.
   to *choose rounds*, and judge the model on the untouched hold-out.
 - Every model, grid point and feature set you try is a trial. Pass the count to the DSR.
 - In-sample predictions of a fitted model are not a backtest. Only the hold-out is.
+- **Neural nets:** validate on a *later* slice with a label-horizon gap, never a random
+  split. Fix the seed and thread count. On small daily panels, expect early stopping to
+  halt after a few epochs; that's the model correctly finding little.
+- **Text:** strip tickers before vectorising, or the model learns which stocks rose.
+  Fit labels from the training window only (`news_labels` returns NaN past its end).
 
 ## References
 - ML4T 3rd ed., ch. 6–7 (purged CV, labels), ch. 11 (linear models), ch. 12 (gradient boosting, SHAP)
 - López de Prado (2018), *Advances in Financial ML*, ch. 7 (purged k-fold, embargo)
 - Lundberg & Lee (2017), SHAP; Ke et al. (2017), LightGBM
+- ML4T 3rd ed., ch. 10 (text), ch. 13 (deep learning), ch. 14 (conditional autoencoders);
+  Gu, Kelly & Xiu (2021), "Autoencoder Asset Pricing Models"
+- Demos: `demo.ipynb` (CV, LightGBM, text; core install) and `demo_dl.ipynb`
+  (#9 and #10; needs the `dl` extra, so CI does not run it)

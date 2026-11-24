@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from quantskills.data import load_cached, synthetic_prices
+from quantskills.data import load_cached, synthetic_prices, synthetic_prices_with_news
 from quantskills.robustness import (
     RobustnessReport,
     plot_decay,
@@ -60,6 +60,7 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     p.add_argument("--strategy", choices=list(STRATEGIES), default="factor-long-short")
     p.add_argument("--all", action="store_true", help="every strategy, one summary table")
+    p.add_argument("--only", nargs="+", choices=list(STRATEGIES), help="a subset, with --all")
     p.add_argument(
         "--data", choices=["synthetic-plus", "synthetic", "cache"], default="synthetic-plus"
     )
@@ -73,11 +74,11 @@ def main() -> None:
     if a.data == "cache":
         prices = load_cached()
     elif a.data == "synthetic-plus":
-        prices = synthetic_prices(seed=a.seed, n_pairs=3, garch_index=True)
+        prices = synthetic_prices_with_news(seed=a.seed)
     else:
         prices = synthetic_prices(seed=a.seed)
     train_end = holdout_date(prices.index.get_level_values("date"), 0.3)
-    names = list(STRATEGIES) if a.all else [a.strategy]
+    names = (a.only or list(STRATEGIES)) if a.all else [a.strategy]
     params = dict(_parse(kv) for kv in a.param)
 
     reports: dict[str, RobustnessReport] = {}

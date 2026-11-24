@@ -4,6 +4,7 @@
 * ``perturb``: price noise, execution delay, parameter sensitivity surfaces
 * ``calibration``: Brier score, log loss, ECE, reliability tables
 * ``regime``: past-only volatility / trend regimes and per-regime metrics
+* ``text_attack``: adversarial stress for news-driven signals
 * ``report``: all of the above plus DSR, graded red / amber / green
 """
 
@@ -33,10 +34,12 @@ from quantskills.robustness.regime import (
     regime_table,
 )
 from quantskills.robustness.report import SENSITIVITY_AXES, RobustnessReport, robustness_report
+from quantskills.robustness.text_attack import ATTACKS, attack_news, text_attack_test
 from quantskills.robustness.verdict import AMBER, GREEN, NA, RED, THRESHOLDS, Check, grade, overall
 
 __all__ = [
     "AMBER",
+    "ATTACKS",
     "GREEN",
     "NA",
     "RED",
@@ -47,6 +50,7 @@ __all__ = [
     "PBOResult",
     "RobustnessReport",
     "add_price_noise",
+    "attack_news",
     "brier_decomposition",
     "brier_score",
     "calibration_summary",
@@ -70,4 +74,5 @@ __all__ = [
     "reliability_table",
     "robustness_report",
     "sensitivity_surface",
+    "text_attack_test",
 ]

@@ -20,6 +20,10 @@ dependencies = [
     "lightgbm>=4.3",
 ]
 
+[project.optional-dependencies]
+# Deep-learning strategies (#9, #10). Optional: `uv sync --extra dl`. Torch is BSD-3.
+dl = ["torch>=2.2"]
+
 [project.scripts]
 qs-terminal = "quantskills.terminal.app:main"
 
@@ -32,6 +36,15 @@ dev = [
     "nbformat>=5",
     "ipykernel>=6",
 ]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+# CPU-only wheels: a fraction of the size of the default CUDA build on Linux.
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [build-system]
 requires = ["hatchling"]

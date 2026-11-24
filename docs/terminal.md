@@ -6,7 +6,7 @@ functions and draws the results. It holds no quant logic of its own.
 
 ```bash
 uv run qs-terminal            # cached prices from data/ (offline)
-uv run qs-terminal --demo     # synthetic prices, no download needed
+uv run qs-terminal --demo     # synthetic prices and headlines, no download needed
 ```
 
 If the cache is empty, the watchlist says so and tells you how to fill it
@@ -24,7 +24,7 @@ Demo data: 30 synthetic stocks, 3 cointegrated pairs (`PAIRkA/B`) and a GARCH in
 | `WATCH` | Watchlist: last, daily change, 52-week range, 3M vol, 60-day sparkline |
 | `QUOTE <TICKER>` or just `<TICKER>` | Quote detail with 1M / 3M / YTD / 1Y returns |
 | `CHART <TICKER> [1M\|3M\|6M\|1Y\|2Y\|5Y\|MAX]` | Close with SMA 50 / 200 |
-| `STRAT [strategy]` | Strategy lab: pick any of the 7 strategies, edit params, hold-out fraction and costs, then run |
+| `STRAT [strategy]` | Strategy lab: pick any of the 10 strategies (#9 and #10 need `uv sync --extra dl`), edit params, hold-out fraction and costs, then run |
 | `BT <strategy> [key=value ...]` | Run a backtest right away, e.g. `BT pairs-coint entry_z=1.5` |
 | `RESULTS` | Re-open the last backtest's results |
 | `DATA DEMO\|CACHE` | Switch data source |

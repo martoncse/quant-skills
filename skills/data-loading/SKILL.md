@@ -18,6 +18,12 @@ for checking that a method recovers a planted signal and finds nothing in noise.
   `drift_vol=0` gives a no-signal null panel. `n_pairs=k` appends k cointegrated
   pairs (`PAIRkA/B`); `garch_index=True` appends `IDX` with GARCH(1,1) volatility.
   Neither changes the main panel.
+- `synthetic_news(prices, seed, p_news, strength) -> DataFrame[date, ticker, headline, truth]`:
+  headlines whose tone matches the next 5-day relative return with probability `strength`
+  (the generator looks ahead on purpose; strategies never do). `strength=0` is a null.
+  `attach_news(prices, news)` puts them in `prices.attrs["news"]`; strategies read them
+  with `news_until(data)`, which cuts at the data's last date.
+  `synthetic_prices_with_news(seed)` = the synthetic-plus panel with headlines.
 - Output convention (checked by `validate_prices`):
   - index `MultiIndex(date, ticker)`, dates tz-naive, sorted ascending, no duplicates
   - columns `open, high, low, close, volume`; prices split/dividend adjusted

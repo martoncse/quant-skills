@@ -1,6 +1,6 @@
 ---
 name: robustness
-description: Test whether a backtest's edge is real: deflated Sharpe, PBO (CSCV), noise/delay/parameter perturbations, regime splits and forecast calibration, graded red/amber/green.
+description: Test whether a backtest's edge is real: DSR, PBO (CSCV), noise/delay/parameter perturbations, regimes, adversarial text and calibration, graded red/amber/green.
 ---
 
 ## When to use
@@ -24,6 +24,9 @@ Does it only work in one kind of market (regimes)? Are its probabilities honest
   - `sensitivity_surface(cls, params, {p1: [...], p2: [...]}, train)` -> `(surface, trial_returns)`
   - `walk_forward_backtest(cls, params, train, n_folds=4)` (in `robustness.perturb`)
   - `regime_labels(close, "vol" | "trend")`, `regime_table(returns, labels)`, `regime_report`
+  - `attack_news(news, kind, rate)` for `kind` in `ATTACKS` (paraphrase, synonyms, typos,
+    pump) and `text_attack_test(cls, params, train)`: Sharpe with clean vs attacked news.
+    The report adds an "Adversarial text" check for strategies with `uses_news = True`.
   - `brier_score`, `log_loss`, `reliability_table`, `expected_calibration_error`,
     `brier_decomposition`, `calibration_summary`; out-of-fold probabilities from
     `quantskills.models.oof_predictions`
@@ -57,8 +60,9 @@ Does it only work in one kind of market (regimes)? Are its probabilities honest
   "profit" from the noise itself.
 - Calibration matters only when probabilities are used as probabilities (sizing,
   confidence). A ranking strategy can be useful and badly calibrated.
-- **Not yet covered:** adversarial stress on text/sentiment signals arrives with
-  strategy #8 (Phase 5).
+- **Adversarial text** attacks the *live* feed only: the model is fitted on clean
+  headlines from the first 60% of the training window and scored on the rest. Paraphrase,
+  synonyms and typos keep the meaning a human would read; `pump` adds fake upbeat headlines.
 - Green is a triage flag, not proof. Synthetic results illustrate the method only.
 
 ## References

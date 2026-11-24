@@ -32,6 +32,7 @@ from quantskills.robustness.perturb import (
     train_backtest,
 )
 from quantskills.robustness.regime import regime_report
+from quantskills.robustness.text_attack import text_attack_test
 from quantskills.robustness.verdict import (
     AMBER,
     GREEN,
@@ -55,6 +56,9 @@ SENSITIVITY_AXES: dict[str, dict[str, tuple[Any, ...]]] = {
     "bayes-pairs": {"entry_z": (1.5, 2.0, 2.5), "delta": (1e-6, 1e-5, 1e-4)},
     "gbm-long-short": {"num_leaves": (7, 15, 31), "min_data_in_leaf": (100, 200, 400)},
     "unsupervised-risk": {"lookback": (126, 252, 504), "rebalance_days": (10, 21, 42)},
+    "text-sentiment": {"window_days": (3, 5, 10), "quantile": (0.2, 0.25, 0.33)},
+    "dl-forecast": {"hidden": (8, 16, 32), "dropout": (0.0, 0.1, 0.3)},
+    "cond-autoencoder": {"n_factors": (1, 3, 5), "hidden": (8, 16, 32)},
 }
 
 
@@ -72,6 +76,7 @@ class RobustnessReport:
     noise: pd.DataFrame
     delay: pd.DataFrame
     regimes: pd.DataFrame
+    text_attacks: pd.DataFrame | None = None  # news strategies only
     mode: str = "walk-forward"
     checks: list[Check] = field(default_factory=list)
 
@@ -183,11 +188,17 @@ def robustness_report(
     delay = delay_test(base_w, close, delays, costs)
     say("regimes")
     regimes = regime_report(base_ret, close)
+    text_attacks = None
+    if getattr(cls, "uses_news", False):
+        say("adversarial text attacks")
+        text_attacks = text_attack_test(cls, params, train, costs=costs)
 
     base_sr = wf_sr if mode == "walk-forward" else is_sr
     checks = _grade(
         base_sr, is_sr, wf_sr, oos_sr, dsr, pbo, surface, noise, delay, regimes, noise_bps
     )
+    if text_attacks is not None:
+        checks.insert(-2 if mode == "walk-forward" else -1, _text_check(text_attacks))
     return RobustnessReport(
         strategy=cls.name,
         params=params,
@@ -201,8 +212,34 @@ def robustness_report(
         noise=noise,
         delay=delay,
         regimes=regimes,
+        text_attacks=text_attacks,
         mode=mode,
         checks=checks,
+    )
+
+
+def _text_check(t: pd.DataFrame) -> Check:
+    T = THRESHOLDS["text"]
+    rule = f"≥ {T[0]} green, ≥ {T[1]} amber"
+    base = float(t.loc[t["attack"] == "none", "sharpe"].iloc[0])
+    hit = t[t["attack"] != "none"]
+    worst = hit.loc[hit["sharpe"].idxmin()]
+    if np.isnan(base) or base < MIN_BASE_SHARPE:
+        return Check(
+            "Adversarial text",
+            np.nan,
+            f"— (base SR {_fmt(base)} < {MIN_BASE_SHARPE})",
+            rule,
+            NA,
+            note="base Sharpe too small",
+        )
+    r = float(worst["sharpe"]) / base
+    return Check(
+        "Adversarial text",
+        r,
+        f"{_fmt(r)} kept (worst: {worst['attack']}, SR {_fmt(float(worst['sharpe']))})",
+        rule,
+        grade(r, *T),
     )
 
 

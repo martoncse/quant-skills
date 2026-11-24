@@ -5,7 +5,7 @@ import asyncio
 import pytest
 from textual.widgets import DataTable, Input, OptionList
 
-from quantskills.data import synthetic_prices
+from quantskills.data import attach_news, synthetic_news, synthetic_prices
 from quantskills.strategies import STRATEGIES
 from quantskills.terminal.app import QSTerminal
 from quantskills.terminal.screens import (
@@ -30,7 +30,8 @@ def small_prices():
 @pytest.fixture(scope="module")
 def rich_prices():
     """Enough structure for every strategy: pairs to find, a GARCH index to time."""
-    return synthetic_prices(n_assets=15, n_days=700, seed=3, n_pairs=2, garch_index=True)
+    prices = synthetic_prices(n_assets=15, n_days=700, seed=3, n_pairs=2, garch_index=True)
+    return attach_news(prices, synthetic_news(prices, seed=3, p_news=0.2))
 
 
 async def _type(pilot, text: str) -> None:
@@ -202,7 +203,14 @@ def test_risk_screen_reports_bad_window(small_prices):
 
 @pytest.mark.parametrize("name", list(STRATEGIES))
 def test_every_strategy_runs_from_the_terminal(name, rich_prices):
-    fast = {"gbm-long-short": " max_rounds=30", "unsupervised-risk": " lookback=126"}
+    fast = {
+        "gbm-long-short": " max_rounds=30",
+        "unsupervised-risk": " lookback=126",
+        "dl-forecast": " max_epochs=2 lookback=63",
+        "cond-autoencoder": " max_epochs=20",
+    }
+    if name in {"dl-forecast", "cond-autoencoder"}:
+        pytest.importorskip("torch")
 
     async def flow():
         app = QSTerminal(prices=rich_prices)

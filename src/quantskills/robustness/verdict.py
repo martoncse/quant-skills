@@ -57,6 +57,7 @@ THRESHOLDS: dict[str, tuple[float, float]] = {
     "pbo_loss": (0.10, 0.30),  # P(IS winner has OOS Sharpe < 0), lower is better
     "noise": (0.75, 0.40),  # Sharpe kept after 25 bps price noise
     "delay": (0.75, 0.40),  # Sharpe kept when trading 1 day late
+    "text": (0.75, 0.40),  # Sharpe kept under the worst adversarial text attack
     "surface": (0.50, 0.00),  # worst grid Sharpe / base Sharpe
     "holdout": (0.50, 0.00),  # hold-out Sharpe / in-sample Sharpe
     "regime": (0.00, -1.00),  # worst regime Sharpe (losing in one regime is common)
