@@ -21,7 +21,8 @@ on 2026-11-23. Ideas only. No code or prose is copied.
 
 Skills map: `data-loading` → ch. 2; `features-alpha` → ch. 7–8; `models` → ch. 6–7, 11–12;
 `backtesting` → ch. 6, 16, 18; `evaluation` → ch. 7, 16; `portfolio-risk` → ch. 14, 17, 19;
-`robustness` → ch. 16 (overfitting tests, strategy evaluation).
+`robustness` → ch. 16 (overfitting tests, strategy evaluation); `fundamental-pitch` → outside the
+book (see the valuation texts below).
 
 Code for strategies #1–#10: `src/quantskills/strategies/` (`factor_long_short`, `linear_forecast`,
 `pairs_coint`, `vol_timing`, `bayes_pairs`, `gbm_long_short`, `unsupervised_risk`,
@@ -57,13 +58,18 @@ Strategy #5 uses an exact conjugate posterior for the Bayesian Sharpe instead of
 - Tetlock, P. (2007). Giving Content to Investor Sentiment. *J. of Finance*; Loughran, T. & McDonald, B. (2011). When Is a Liability Not a Liability? *J. of Finance*. (#8: news tone; our lexicon is our own, not theirs)
 - Avellaneda, M. & Lee, J.-H. (2010). Statistical Arbitrage in the US Equities Market. *Quantitative Finance*. (eigenportfolios, #7)
 
+## Valuation (fundamental-pitch)
+- Damodaran, A. *Investment Valuation* (3rd ed., Wiley); Koller, T., Goedhart, M. & Wessels, D. *Valuation* (7th ed., McKinsey / Wiley). (DCF, WACC, terminal value)
+- Rappaport, A. & Mauboussin, M. *Expectations Investing* (reverse DCF).
+- Sharpe, W. (1964). Capital Asset Prices. *J. of Finance*. (CAPM cost of equity)
+
 ## Libraries (licenses checked before adding)
 | Library | Use | License |
 |---|---|---|
 | numpy, pandas, scipy | core | BSD-3 |
 | pyarrow | parquet cache | Apache-2.0 |
 | yfinance | free price data | Apache-2.0 |
-| matplotlib | figures | PSF-based (matplotlib license) |
+| matplotlib (+ Pillow) | figures; Pillow stitches the demo GIF | PSF-based / MIT-CMU (HPND) |
 | textual, textual-plotext, plotext | terminal UI | MIT |
 | scikit-learn | ridge / lasso / logistic, Ledoit-Wolf | BSD-3 |
 | statsmodels (+ patsy) | Engle-Granger, Johansen | BSD-3 (patsy BSD-2) |

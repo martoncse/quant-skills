@@ -15,11 +15,15 @@ from pathlib import Path
 import pandas as pd
 from textual.app import App
 from textual.binding import Binding
+from textual.theme import Theme
 
+from quantskills.fundamental import example_case, load_case
 from quantskills.strategies import STRATEGIES, StrategyRun, get_strategy
 from quantskills.terminal.commands import Command, CommandError, parse_command
+from quantskills.terminal.fmt import PALETTES, THEMES, set_palette
 from quantskills.terminal.screens import (
     ChartScreen,
+    DCFScreen,
     HelpScreen,
     QuoteScreen,
     ResultsScreen,
@@ -31,21 +35,21 @@ from quantskills.terminal.screens import (
 from quantskills.terminal.state import TerminalState
 
 CSS = """
-Screen { background: #0b0f14; }
-#cmd { border: tall #d29922; background: #11161d; }
-#cmd:focus { border: tall #39c5bb; }
-.status { padding: 0 1; height: auto; color: #8b949e; }
+Screen { background: $background; }
+#cmd { border: tall $primary; background: $surface; }
+#cmd:focus { border: tall $secondary; }
+.status { padding: 0 1; height: auto; color: $text-muted; }
 .panel { padding: 1 2; height: auto; }
 DataTable { height: 1fr; }
 PlotextPlot { height: 1fr; }
 #lab { height: 1fr; }
-#strategies { width: 28; height: 1fr; border: round #30363d; }
+#strategies { width: 28; height: 1fr; border: round $qs-border; }
 #params { width: 1fr; padding: 0 1; }
 #param-fields { height: auto; }
 #params Input {
-    width: 48; height: 1; border: none; padding: 0 1; background: #161b22; margin-bottom: 1;
+    width: 48; height: 1; border: none; padding: 0 1; background: $panel; margin-bottom: 1;
 }
-#params Input:focus { background: #1f2a36; }
+#params Input:focus { background: $panel-lighten-1; }
 #run-row { height: auto; margin: 1 0; }
 #run-row .status { width: 1fr; padding: 1 2; }
 #metrics { width: 44; }
@@ -58,7 +62,36 @@ PlotextPlot { height: 1fr; }
 #robust-checks { width: 3fr; }
 #robust-side { width: 2fr; }
 #robust-side DataTable { height: auto; max-height: 12; }
+#dcf-top { height: auto; }
+#dcf-metrics { width: 46; height: auto; }
+#dcf-scenarios { width: 1fr; height: auto; }
+#dcf-sens, #dcf-comps { height: auto; }
+#help { height: auto; }
 """
+
+
+def _themes() -> list[Theme]:
+    """Textual themes built from the same palettes the tables use (``fmt.PALETTES``)."""
+    out = []
+    for name, p in PALETTES.items():
+        out.append(
+            Theme(
+                name=name,
+                primary=p["accent"],
+                secondary=p["line"],
+                accent=p["line"],
+                foreground=p["foreground"],
+                background=p["background"],
+                surface=p["surface"],
+                panel=p["panel"],
+                success=p["up"],
+                error=p["down"],
+                warning=p["warn"],
+                dark=name != "qs-light",
+                variables={"qs-border": p["border"]},
+            )
+        )
+    return out
 
 
 class QSTerminal(App):
@@ -70,6 +103,8 @@ class QSTerminal(App):
         Binding("f3", "command('STRAT')", "Lab"),
         Binding("f4", "command('RISK')", "Risk"),
         Binding("f5", "command('ROBUST')", "Robust"),
+        Binding("f6", "command('DCF')", "DCF"),
+        Binding("ctrl+t", "command('THEME')", "Theme"),
         Binding("ctrl+q", "quit", "Quit"),
     ]
 
@@ -78,9 +113,13 @@ class QSTerminal(App):
         source: str = "cache",
         cache_dir: str | Path = "data",
         prices: pd.DataFrame | None = None,
+        theme: str = "qs-dark",
     ) -> None:
         super().__init__()
+        for t in _themes():
+            self.register_theme(t)
         self.state = TerminalState(cache_dir=Path(cache_dir))
+        self.apply_theme(theme)
         self._initial_source = source
         if prices is not None:
             self.state.prices = prices
@@ -212,6 +251,30 @@ class QSTerminal(App):
             return
         self.push_screen(RobustScreen(strategy))
 
+    def apply_theme(self, name: str) -> None:
+        set_palette(name)  # table colours
+        self.theme = name  # widget colours (Textual CSS variables)
+        self.state.theme = name
+
+    def _cmd_theme(self, cmd: Command) -> None:
+        if cmd.args:
+            name = cmd.args[0]
+        else:  # cycle
+            name = THEMES[(THEMES.index(self.state.theme) + 1) % len(THEMES)]
+        self.apply_theme(name)
+        self.notify(f"Theme: {name.removeprefix('qs-')}", timeout=2)
+        recolor = getattr(self.screen, "refresh_view", None)
+        if callable(recolor):
+            recolor()
+
+    def _cmd_dcf(self, cmd: Command) -> None:
+        try:
+            case = load_case(cmd.args[0]) if cmd.args else example_case()
+        except (OSError, ValueError) as exc:
+            self.report_error(f"Could not load case: {exc}")
+            return
+        self.push_screen(DCFScreen(case))
+
     def _cmd_help(self, cmd: Command) -> None:
         self.push_screen(HelpScreen())
 
@@ -223,8 +286,11 @@ def main() -> None:
     p = argparse.ArgumentParser(prog="qs-terminal", description="QS Terminal")
     p.add_argument("--demo", action="store_true", help="use synthetic prices")
     p.add_argument("--cache-dir", default="data")
+    p.add_argument("--theme", choices=[t.removeprefix("qs-") for t in THEMES], default="dark")
     a = p.parse_args()
-    QSTerminal(source="demo" if a.demo else "cache", cache_dir=a.cache_dir).run()
+    QSTerminal(
+        source="demo" if a.demo else "cache", cache_dir=a.cache_dir, theme=f"qs-{a.theme}"
+    ).run()
 
 
 if __name__ == "__main__":

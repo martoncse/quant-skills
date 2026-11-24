@@ -25,6 +25,7 @@ class TerminalState:
     message: str = ""
     last_run: StrategyRun | None = None
     last_error: str = ""
+    theme: str = "qs-dark"
 
     def load(self, source: str) -> None:
         """Load ``"cache"`` (offline parquet cache) or ``"demo"`` (synthetic)."""

@@ -10,6 +10,7 @@ from quantskills.strategies import STRATEGIES
 from quantskills.terminal.app import QSTerminal
 from quantskills.terminal.screens import (
     ChartScreen,
+    DCFScreen,
     HelpScreen,
     QuoteScreen,
     ResultsScreen,
@@ -270,5 +271,64 @@ def test_robust_defaults_to_last_run_and_validates(small_prices):
             assert "Unknown strategy" in app.state.last_error
             await _type(pilot, "ROBUST factor-long-short quantile=0.9")
             assert "quantile" in app.state.last_error
+
+    run(flow())
+
+
+def test_theme_command_and_cycle(small_prices):
+    from quantskills.terminal import fmt
+
+    async def flow():
+        app = QSTerminal(prices=small_prices)
+        async with app.run_test(size=SIZE) as pilot:
+            assert app.theme == "qs-dark" and fmt.palette_name() == "qs-dark"
+            await _type(pilot, "THEME light")
+            assert app.theme == "qs-light" and fmt.palette_name() == "qs-light"
+            assert app.state.theme == "qs-light"
+            await pilot.press("ctrl+t")  # cycles: light -> dark
+            await pilot.pause()
+            assert app.theme == "qs-dark"
+            await _type(pilot, "THEME neon")
+            assert "usage: THEME" in app.state.last_error
+        fmt.set_palette("qs-dark")
+
+    run(flow())
+
+
+def test_dcf_screen_shows_example_and_rejects_bad_files(small_prices, tmp_path):
+    async def flow():
+        app = QSTerminal(prices=small_prices)
+        async with app.run_test(size=SIZE) as pilot:
+            await pilot.press("f6")
+            await pilot.pause()
+            assert isinstance(app.screen, DCFScreen)
+            assert app.screen.case.company.fictional
+            assert app.screen.query_one("#dcf-metrics", DataTable).row_count == 8
+            assert app.screen.query_one("#dcf-scenarios", DataTable).row_count == 3
+            sens = app.screen.query_one("#dcf-sens", DataTable)
+            assert sens.row_count == 5 and len(sens.columns) == 6
+            assert app.screen.query_one("#dcf-comps", DataTable).row_count == 5
+            title = str(app.screen.query_one("#dcf-title").render())
+            assert "FICTIONAL" in title and "not investment advice" in title
+            await pilot.press("escape")
+            await _type(pilot, f"DCF {tmp_path / 'missing.json'}")
+            assert "Could not load case" in app.state.last_error
+            bad = tmp_path / "bad.json"
+            bad.write_text('{"company": {}}')
+            await _type(pilot, f"DCF {bad}")
+            assert "missing" in app.state.last_error
+
+    run(flow())
+
+
+def test_help_is_grouped(small_prices):
+    async def flow():
+        app = QSTerminal(prices=small_prices)
+        async with app.run_test(size=(120, 60)) as pilot:
+            await _type(pilot, "HELP")
+            text = app.export_screenshot().replace("&#160;", " ")
+            for group in ("Market data", "Strategies", "Risk", "Valuation", "Session"):
+                assert group in text
+            assert "THEME" in text and "Ctrl+T" in text
 
     run(flow())

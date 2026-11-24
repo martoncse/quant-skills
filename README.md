@@ -2,7 +2,8 @@
 
 A library of tested **Claude skills** for quantitative finance and ML for trading.
 Each skill is a self-contained unit covering one stage of the research pipeline:
-data, features, models, backtesting, portfolio risk, evaluation and robustness.
+data, features, models, backtesting, portfolio risk, evaluation, robustness and
+fundamental valuation.
 All twelve strategy families from *Machine Learning for Trading* (eleven trading strategies
 plus a synthetic-data stress-testing tool) are reimplemented
 from scratch and run through the same cost-aware backtester and tear sheet, then
@@ -21,8 +22,10 @@ uv run python skills/backtesting/scripts/run_backtest.py       # strategy #1 on 
 uv run python skills/evaluation/scripts/select_and_deflate.py  # sweep → deflated Sharpe → hold-out
 uv run python skills/evaluation/scripts/strategy_gallery.py    # all 11 strategies, one table
 uv run python skills/robustness/scripts/robustness_report.py --strategy pairs-coint  # DSR, PBO, perturbations
+uv run python skills/fundamental-pitch/scripts/value_case.py --pitch out/  # DCF + one-page pitch
 uv run python skills/data-loading/scripts/fetch.py --tickers SPY QQQ IWM  # real data into data/
 uv run qs-terminal --demo                                      # the terminal, on synthetic data
+uv run qs-terminal --demo --theme amber                        # ... in amber (or light)
 ```
 
 ## QS Terminal
@@ -31,13 +34,23 @@ A keyboard-driven research terminal (Textual): watchlist, quotes, charts,
 a strategy lab that backtests any of the eleven strategies in a background worker,
 a results view with in-sample vs hold-out metrics, equity, drawdown and the trade
 list, a risk screen (`RISK hrp`, F4) with weights, VaR/CVaR and a clustered
-correlation heatmap, and a robustness screen (`ROBUST gbm-long-short`, F5) with a
-red/amber/green verdict. Type `HELP` inside it, or see [docs/terminal.md](docs/terminal.md).
+correlation heatmap, a robustness screen (`ROBUST gbm-long-short`, F5) with a
+red/amber/green verdict, and a valuation screen (`DCF`, F6). Three colour themes
+(`THEME dark|amber|light`, ctrl+t). Type `HELP` inside it, or see [docs/terminal.md](docs/terminal.md).
+
+![QS Terminal demo](docs/img/terminal-demo.gif)
+
+<details><summary>Still screenshots</summary>
 
 ![QS Terminal watchlist](docs/img/terminal-watchlist.png)
 ![QS Terminal backtest results](docs/img/terminal-results.png)
 ![QS Terminal risk screen](docs/img/terminal-risk.png)
 ![QS Terminal robustness screen](docs/img/terminal-robust.png)
+![QS Terminal DCF screen](docs/img/terminal-dcf.png)
+![QS Terminal amber theme](docs/img/terminal-amber.png)
+![QS Terminal help](docs/img/terminal-help.png)
+
+</details>
 
 ## What's different
 - **Costs on by default** (5 + 5 bps). Weights drift between rebalances and turnover is charged on the drifted book.
@@ -108,6 +121,17 @@ Strategy #1 on the plain synthetic panel, and its noise-only control, is in its
 [write-up](strategies/factor-long-short/README.md): the in-sample Sharpe is 1.42
 with a signal and 1.32 without one. After a 12-config sweep, the DSR is 0.56.
 
+## Fundamental valuation
+
+One company, from a JSON *case file*: a five-year FCFF forecast, WACC from CAPM, Gordon and
+exit-multiple terminal values, a WACC × growth sensitivity grid, bear / bull scenarios, a
+reverse DCF ("what growth does the price already assume?") and peer multiples, laid out as
+a one-page pitch. The thesis, risks and catalysts come from the analyst's case file; the
+generator never writes them. The bundled example is a **fictional** company
+([pitch](skills/fundamental-pitch/examples/example_industrial/pitch.md)).
+
+![football field](skills/fundamental-pitch/examples/example_industrial/football_field.png)
+
 ## Skills
 
 | Skill | Status | What it does |
@@ -119,7 +143,7 @@ with a signal and 1.32 without one. After a 12-config sweep, the DSR is 0.56.
 | [models](skills/models/SKILL.md) | ✅ | feature/label panels, purged + embargoed CV, ridge/lasso/logistic, LightGBM + SHAP, headline sentiment, PyTorch nets (`dl` extra) |
 | [portfolio-risk](skills/portfolio-risk/SKILL.md) | ✅ | Ledoit-Wolf, min-variance, mean-variance, HRP, PCA eigenportfolios, VaR/CVaR |
 | [robustness](skills/robustness/SKILL.md) | ✅ | DSR, PBO (CSCV), noise / delay / sensitivity tests, regimes, calibration, R/A/G verdict |
-| fundamental-pitch | ⏳ Phase 6 | DCF + one-page pitch |
+| [fundamental-pitch](skills/fundamental-pitch/SKILL.md) | ✅ | DCF (FCFF, CAPM WACC), sensitivity, scenarios, reverse DCF, peer multiples, football field, one-page pitch ([example](skills/fundamental-pitch/examples/example_industrial/pitch.md)) |
 
 ## Build checklist
 
@@ -129,7 +153,7 @@ with a signal and 1.32 without one. After a 12-config sweep, the DSR is 0.56.
 - [x] **Phase 4: Robustness:** module, `ROBUST` screen (F5), [write-up](docs/robustness.md) (adversarial text stress waits for #8)
 - [x] **Phase 5: Advanced strategies:** #8 news sentiment (+ adversarial text tests), #9 deep learning, #10 conditional autoencoder (`dl` extra)
 - [x] **Phase 5 stretch:** #11 synthetic histories (block bootstrap, TimeGAN) for stress tests, #12 Double-DQN agent
-- [ ] Phase 6: fundamental-pitch, terminal polish
+- [x] **Phase 6: Extras:** fundamental-pitch skill + `DCF` screen (F6), themes (`THEME`, ctrl+t), grouped help, demo GIF (`docs/tools/make_demo_gif.py`)
 
 ## Layout
 Logic lives in `src/quantskills/`. Skills hold `SKILL.md`, thin scripts, a

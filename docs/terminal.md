@@ -30,9 +30,12 @@ Demo data: 30 synthetic stocks, 3 cointegrated pairs (`PAIRkA/B`) and a GARCH in
 | `DATA DEMO\|CACHE` | Switch data source |
 | `RISK [hrp\|min_var\|inverse_vol\|equal\|eigen] [lookback]` | Weights, VaR/CVaR and a correlation heatmap (default `hrp 252`) |
 | `ROBUST [strategy] [key=value ...]` | Robustness report: DSR, PBO, noise / delay / sensitivity, regimes and a red/amber/green verdict. With no strategy, uses the last one you backtested |
+| `DCF [case.json]` | Valuation of a case file: DCF metrics, scenarios, a WACC x growth grid coloured against the price, and peers. No argument: the bundled fictional example |
+| `THEME [dark\|amber\|light]` | Switch colour theme; no argument (or ctrl+t) cycles |
 | `HELP`, `QUIT` | |
 
-Keys: `F1` help, `F2` watchlist, `F3` lab, `F4` risk, `F5` robustness, `ctrl+r` run (in the lab), `Esc` back,
+Keys: `F1` help, `F2` watchlist, `F3` lab, `F4` risk, `F5` robustness, `F6` DCF, `ctrl+t` theme,
+`ctrl+r` run (in the lab), `Esc` back,
 `/` focus the command bar, `ctrl+q` quit.
 
 ## Screens
@@ -66,6 +69,29 @@ Keys: `F1` help, `F2` watchlist, `F3` lab, `F4` risk, `F5` robustness, `ctrl+r` 
 
 ![robustness screen](img/terminal-robust.png)
 
+- **DCF**: `quantskills.fundamental` (`dcf_value`, `scenario_table`, `sensitivity`,
+  `comps_table`, `implied_growth`). The sensitivity cells are coloured by value relative
+  to the price (blue above, red below). Fictional cases are labelled in the title.
+- **Help**: commands grouped (market data, strategies, risk and robustness, valuation,
+  session), keys and examples; scrollable.
+
+## Themes
+
+`qs-dark` (default), `qs-amber` (monochrome-phosphor style) and `qs-light`, from
+`uv run qs-terminal --theme amber`, `THEME amber`, or ctrl+t to cycle. Each theme is one
+palette in `terminal/fmt.py` (`PALETTES`): it feeds both the Textual theme (widget
+colours, via CSS variables such as `$primary`) and the Rich colours used in tables
+(gains, losses, heatmaps, verdicts). Screens already open keep their table colours until
+reopened; the watchlist redraws at once.
+
+## Demo GIF
+
+`uv run python docs/tools/make_demo_gif.py` drives a scripted session with Textual's test
+pilot, saves SVG screenshots, renders them with headless Chrome and stitches
+`docs/img/terminal-demo.gif` (plus the DCF, amber and help stills) with Pillow.
+
+![demo](img/terminal-demo.gif)
+
 ## Layout
 
 ```
@@ -83,7 +109,9 @@ src/quantskills/terminal/
 empty-cache message, watchlist → quote → back, chart and help, the lab running a
 backtest in a worker, `BT` with good and bad params, invalid lab input, the risk
 screen (weights, metrics, heatmap, bad methods and windows), the robustness
-screen (checks, surface, F5 reusing the last backtest, bad input), and a `BT` run of
+screen (checks, surface, F5 reusing the last backtest, bad input), the DCF screen
+(example, missing and invalid case files), theme switching and cycling, the grouped help,
+and a `BT` run of
 **every** registered strategy.
 `tests/terminal/test_commands.py` covers the parser.
 

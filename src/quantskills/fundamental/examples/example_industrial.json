@@ -1,0 +1,58 @@
+{
+  "company": {
+    "name": "Example Industrial Co.",
+    "ticker": "EXMPL",
+    "price": 25.0,
+    "shares_out": 120.0,
+    "net_debt": 900.0,
+    "currency": "USD",
+    "as_of": "illustrative",
+    "fictional": true,
+    "source": "invented numbers for a teaching example; no real company"
+  },
+  "base": {
+    "revenue": 2400.0,
+    "ebit_margin": 0.12,
+    "tax_rate": 0.24,
+    "da_pct_revenue": 0.04,
+    "capex_pct_revenue": 0.05,
+    "nwc_pct_revenue": 0.15
+  },
+  "forecast": {
+    "revenue_growth": [0.06, 0.055, 0.05, 0.045, 0.04],
+    "ebit_margin": [0.125, 0.13, 0.135, 0.14, 0.14]
+  },
+  "discount": {
+    "risk_free": 0.042,
+    "equity_risk_premium": 0.05,
+    "beta": 1.1,
+    "pre_tax_cost_of_debt": 0.06,
+    "debt_weight": 0.25
+  },
+  "terminal": {
+    "growth": 0.025,
+    "exit_ev_ebitda": 9.0
+  },
+  "peers": [
+    {"name": "Peer A (fictional)", "ev_ebitda": 8.5, "pe": 15.0},
+    {"name": "Peer B (fictional)", "ev_ebitda": 10.0, "pe": 18.0},
+    {"name": "Peer C (fictional)", "ev_ebitda": 9.2, "pe": 16.5},
+    {"name": "Peer D (fictional)", "ev_ebitda": 11.5, "pe": 21.0},
+    {"name": "Peer E (fictional)", "ev_ebitda": 7.8, "pe": 13.0}
+  ],
+  "scenarios": {
+    "bear": {"growth_shift": -0.03, "margin_shift": -0.02, "wacc_shift": 0.01, "terminal_growth": 0.015},
+    "bull": {"growth_shift": 0.02, "margin_shift": 0.015, "wacc_shift": -0.005, "terminal_growth": 0.03}
+  },
+  "thesis": [
+    "Illustrative: margins recover from 12% to 14% as a pricing reset passes through, the kind of claim a real thesis must back with evidence.",
+    "Illustrative: modest growth (6% falling to 4%) is enough; the case does not rely on a re-rating."
+  ],
+  "risks": [
+    "Illustrative: the margin recovery stalls; in the bear case the value falls below the price.",
+    "Illustrative: 9x EBITDA peers may be cheaper for a reason (cyclicality, leverage)."
+  ],
+  "catalysts": [
+    "Illustrative: two quarters of margin expansion in reported results."
+  ]
+}

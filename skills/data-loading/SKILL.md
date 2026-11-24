@@ -28,6 +28,8 @@ for checking that a method recovers a planted signal and finds nothing in noise.
   volatility clustering), no alpha: a fair test bed for return generators (#11).
 - `trend_regime_prices(seed, drift, switch)`: one asset whose drift flips sign in persistent
   regimes; returns `(panel, regime)`. A positive control for trend-following learners (#12).
+- `data.fundamentals.starter_case(ticker)`: a draft valuation case from Yahoo annual
+  statements (base year only; forecasts are yours), cached in `data/fundamentals/`.
 - Output convention (checked by `validate_prices`):
   - index `MultiIndex(date, ticker)`, dates tz-naive, sorted ascending, no duplicates
   - columns `open, high, low, close, volume`; prices split/dividend adjusted

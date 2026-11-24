@@ -47,9 +47,24 @@ COMMANDS: dict[str, tuple[str, str]] = {
         "ROBUST [strategy] [key=value ...]",
         "Robustness: DSR, PBO, noise/delay/sensitivity, regimes, verdict",
     ),
+    "DCF": (
+        "DCF [case.json]",
+        "Valuation: DCF, scenarios, sensitivity, comps (default: a fictional example)",
+    ),
+    "THEME": ("THEME [dark|amber|light]", "Switch the colour theme (no argument: next one)"),
     "HELP": ("HELP", "This list"),
     "QUIT": ("QUIT", "Exit the terminal"),
 }
+
+# How HELP groups the commands. Every command appears in exactly one group.
+COMMAND_GROUPS: dict[str, tuple[str, ...]] = {
+    "Market data": ("WATCH", "QUOTE", "CHART", "DATA"),
+    "Strategies": ("STRAT", "BT", "RESULTS"),
+    "Risk and robustness": ("RISK", "ROBUST"),
+    "Valuation": ("DCF",),
+    "Session": ("THEME", "HELP", "QUIT"),
+}
+THEME_NAMES = ("dark", "amber", "light")
 
 ALIASES = {"W": "WATCH", "Q": "QUOTE", "C": "CHART", "H": "HELP", "?": "HELP", "EXIT": "QUIT"}
 
@@ -101,6 +116,14 @@ def parse_command(text: str) -> Command:
 
     if name == "RISK":
         return _parse_risk(rest)
+    if name == "DCF":
+        if len(rest) > 1:
+            raise CommandError("usage: " + COMMANDS["DCF"][0])
+        return Command(name, tuple(rest))  # a path: keep its case
+    if name == "THEME":
+        if len(rest) > 1 or (rest and rest[0].lower() not in THEME_NAMES):
+            raise CommandError(f"usage: THEME [{'|'.join(THEME_NAMES)}]")
+        return Command(name, tuple(f"qs-{r.lower()}" for r in rest))
     if name in {"WATCH", "HELP", "QUIT", "RESULTS"}:
         if rest:
             raise CommandError(f"{name} takes no arguments")

@@ -31,14 +31,21 @@ from quantskills.backtest import CostModel
 from quantskills.data import period_window, quote_detail, quote_table, to_wide
 from quantskills.eval import drawdown_series, tear_sheet
 from quantskills.features import sma
+from quantskills.fundamental import (
+    Case,
+    comps_table,
+    dcf_value,
+    implied_growth,
+    scenario_table,
+    sensitivity,
+    valuation_label,
+)
 from quantskills.portfolio import RiskView, risk_view
 from quantskills.robustness import RobustnessReport, robustness_report
 from quantskills.strategies import STRATEGIES, Strategy, StrategyRun, get_strategy, run_strategy
-from quantskills.terminal.commands import COMMANDS, parse_value
+from quantskills.terminal.commands import COMMAND_GROUPS, COMMANDS, parse_value
 from quantskills.terminal.fmt import (
-    DOWN,
-    MUTED,
-    UP,
+    c,
     heat,
     num,
     pct,
@@ -51,9 +58,6 @@ from quantskills.utils import holdout_date
 if TYPE_CHECKING:
     from quantskills.terminal.app import QSTerminal
 
-ACCENT = "#d29922"
-LINE = "#39c5bb"
-
 
 def _date_ticks(plt: Any, index: pd.Index, n: int = 5) -> None:
     if len(index) == 0:
@@ -63,7 +67,7 @@ def _date_ticks(plt: Any, index: pd.Index, n: int = 5) -> None:
 
 
 def _label(text: str) -> Text:
-    return Text(text, style=MUTED)
+    return Text(text, style=c("muted"))
 
 
 class QSScreen(Screen):
@@ -121,7 +125,7 @@ class WatchlistScreen(QSScreen):
         table = self.query_one("#watch", DataTable)
         table.clear(columns=True)
         if state.prices is None:
-            status.update(Text(state.message, style=ACCENT))
+            status.update(Text(state.message, style=c("accent")))
             table.display = False
             return
         table.display = True
@@ -145,7 +149,7 @@ class WatchlistScreen(QSScreen):
                 num(row["low_52w"]),
                 num(row["high_52w"]),
                 "—" if pd.isna(row["vol_3m"]) else f"{row['vol_3m']:.1%}",
-                Text(sparkline(hist.to_numpy()[::2]), style=UP if trend >= 0 else DOWN),
+                Text(sparkline(hist.to_numpy()[::2]), style=c("up") if trend >= 0 else c("down")),
                 key=str(ticker),
             )
 
@@ -170,7 +174,7 @@ class QuoteScreen(QSScreen):
         d = quote_detail(prices, self.ticker)
         as_of = pd.Timestamp(d["as_of"]).date()
         self.query_one("#quote-title", Static).update(
-            Text.assemble((self.ticker, "bold " + ACCENT), (f"  ·  as of {as_of}", MUTED))
+            Text.assemble((self.ticker, "bold " + c("accent")), (f"  ·  as of {as_of}", c("muted")))
         )
         t = self.query_one("#quote", DataTable)
         t.add_column("Field", width=16)
@@ -190,9 +194,9 @@ class QuoteScreen(QSScreen):
         hist = to_wide(prices, "close")[self.ticker].dropna().iloc[-120:]
         self.query_one("#quote-spark", Static).update(
             Text.assemble(
-                ("6M  ", MUTED),
-                (sparkline(hist.to_numpy()[::2]), LINE),
-                (f"\n\nCHART {self.ticker} 1Y  for the full chart", MUTED),
+                ("6M  ", c("muted")),
+                (sparkline(hist.to_numpy()[::2]), c("line")),
+                (f"\n\nCHART {self.ticker} 1Y  for the full chart", c("muted")),
             )
         )
 
@@ -266,7 +270,7 @@ class StrategyLabScreen(QSScreen):
         cls = STRATEGIES[name]
         summary = (cls.__doc__ or "").strip().split("\n")[0]
         self.query_one("#lab-title", Static).update(
-            Text.assemble((name, "bold " + ACCENT), ("\n" + summary, MUTED))
+            Text.assemble((name, "bold " + c("accent")), ("\n" + summary, c("muted")))
         )
         container = self.query_one("#param-fields", Vertical)
         await container.remove_children()
@@ -332,7 +336,7 @@ class StrategyLabScreen(QSScreen):
     def _finished(self, run: StrategyRun | None, error: str) -> None:
         self.query_one("#run", Button).disabled = False
         if run is None:
-            self.query_one("#lab-status", Static).update(Text(f"Failed: {error}", style=DOWN))
+            self.query_one("#lab-status", Static).update(Text(f"Failed: {error}", style=c("down")))
             self.qs.report_error(f"Backtest failed: {error}")
             return
         self.query_one("#lab-status", Static).update("Done.")
@@ -386,7 +390,7 @@ class ResultsScreen(QSScreen):
             f"{self.qs.state.source} data · backtest, not a forecast"
         )
         self.query_one("#results-title", Static).update(
-            Text.assemble((repr(run.strategy), "bold"), (caption, MUTED))
+            Text.assemble((repr(run.strategy), "bold"), (caption, c("muted")))
         )
 
         sheets = [tear_sheet(run.in_sample), tear_sheet(run.out_of_sample)]
@@ -458,7 +462,7 @@ class RiskScreen(QSScreen):
     def on_mount(self) -> None:
         prices = self.qs.state.prices
         if prices is None:
-            self.query_one("#risk-title", Static).update(Text("No data loaded.", style=DOWN))
+            self.query_one("#risk-title", Static).update(Text("No data loaded.", style=c("down")))
             return
         self._compute(prices, self.method, self.lookback)
 
@@ -472,7 +476,7 @@ class RiskScreen(QSScreen):
         self.app.call_from_thread(self._show, view)
 
     def _failed(self, error: str) -> None:
-        self.query_one("#risk-title", Static).update(Text(f"Failed: {error}", style=DOWN))
+        self.query_one("#risk-title", Static).update(Text(f"Failed: {error}", style=c("down")))
         self.qs.report_error(f"Risk failed: {error}")
 
     def _show(self, v: RiskView) -> None:
@@ -481,7 +485,7 @@ class RiskScreen(QSScreen):
             "historical, not a forecast"
         )
         self.query_one("#risk-title", Static).update(
-            Text.assemble((f"RISK · {v.method}", "bold " + ACCENT), (caption, MUTED))
+            Text.assemble((f"RISK · {v.method}", "bold " + c("accent")), (caption, c("muted")))
         )
         wt = self.query_one("#risk-weights", DataTable)
         wt.add_columns("Ticker", "Weight", "Vol", "Risk %")
@@ -501,7 +505,7 @@ class RiskScreen(QSScreen):
         for t in v.corr.columns:
             ct.add_column(str(t)[:7], width=7)
         for t, row in v.corr.iterrows():
-            ct.add_row(Text(str(t), style=ACCENT), *(heat(x) for x in row))
+            ct.add_row(Text(str(t), style=c("accent")), *(heat(x) for x in row))
 
 
 class RobustScreen(QSScreen):
@@ -528,12 +532,14 @@ class RobustScreen(QSScreen):
     def on_mount(self) -> None:
         prices = self.qs.state.prices
         if prices is None:
-            self.query_one("#robust-verdict", Static).update(Text("No data loaded.", style=DOWN))
+            self.query_one("#robust-verdict", Static).update(
+                Text("No data loaded.", style=c("down"))
+            )
             return
         self._compute(self.strategy, prices, self.test_fraction)
 
     def _progress(self, message: str) -> None:
-        self.query_one("#robust-verdict", Static).update(Text(f"Running: {message} …", MUTED))
+        self.query_one("#robust-verdict", Static).update(Text(f"Running: {message} …", c("muted")))
 
     @work(thread=True, exclusive=True, group="robust")
     def _compute(self, strategy: Strategy, prices: pd.DataFrame, test_fraction: float) -> None:
@@ -549,7 +555,7 @@ class RobustScreen(QSScreen):
         self.app.call_from_thread(self._show, report)
 
     def _failed(self, error: str) -> None:
-        self.query_one("#robust-verdict", Static).update(Text(f"Failed: {error}", style=DOWN))
+        self.query_one("#robust-verdict", Static).update(Text(f"Failed: {error}", style=c("down")))
         self.qs.report_error(f"Robustness failed: {error}")
 
     def _show(self, r: RobustnessReport) -> None:
@@ -558,19 +564,24 @@ class RobustScreen(QSScreen):
             "inside the training window · only the last row uses the hold-out"
         )
         self.query_one("#robust-title", Static).update(
-            Text.assemble((f"ROBUST · {r.strategy}", "bold " + ACCENT), (caption, MUTED))
+            Text.assemble((f"ROBUST · {r.strategy}", "bold " + c("accent")), (caption, c("muted")))
         )
         self.query_one("#robust-verdict", Static).update(
             Text.assemble(
                 ("Verdict: ", "bold"),
                 status_text(r.verdict),
-                ("   a triage flag, not proof: green means no red flags in these tests", MUTED),
+                (
+                    "   a triage flag, not proof: green means no red flags in these tests",
+                    c("muted"),
+                ),
             )
         )
         ct = self.query_one("#robust-checks", DataTable)
         ct.add_columns("Check", "Status", "Value", "Rule")
-        for c in r.checks:
-            ct.add_row(c.name, status_text(c.status), Text(c.display), Text(c.rule, MUTED))
+        for chk in r.checks:
+            ct.add_row(
+                chk.name, status_text(chk.status), Text(chk.display), Text(chk.rule, c("muted"))
+            )
 
         st = self.query_one("#robust-surface", DataTable)
         if r.surface is None:
@@ -587,7 +598,7 @@ class RobustScreen(QSScreen):
                 st.add_column(f"{col:g}", width=7)
             for idx, row in s.iterrows():
                 cells = [heat(v / lim if lim else 0.0, _cell(v, "{:.2f}")) for v in row]
-                st.add_row(Text(f"{idx:g}", ACCENT), *cells)
+                st.add_row(Text(f"{idx:g}", c("accent")), *cells)
 
         pt = self.query_one("#robust-perturb", DataTable)
         pt.add_columns("Test", "Size", "Sharpe")
@@ -607,20 +618,134 @@ class RobustScreen(QSScreen):
             )
 
 
-class HelpScreen(QSScreen):
+class DCFScreen(QSScreen):
+    """DCF, scenarios, sensitivity and comps for one case file. Fast, so no worker."""
+
+    def __init__(self, case: Case) -> None:
+        super().__init__()
+        self.case = case
+
     def compose_body(self) -> ComposeResult:
-        yield Static(id="help", classes="panel")
+        yield Static(id="dcf-title", classes="status")
+        with Horizontal(id="dcf-top"):
+            yield DataTable(id="dcf-metrics", cursor_type="none")
+            yield DataTable(id="dcf-scenarios", cursor_type="none")
+        yield Static(_label("Value per share: WACC (rows) x terminal growth (columns)"))
+        yield DataTable(id="dcf-sens", cursor_type="none")
+        yield Static(_label("Peers (implied value per share)"))
+        yield DataTable(id="dcf-comps", cursor_type="none")
 
     def on_mount(self) -> None:
-        t = Table(title="QS Terminal commands", expand=False)
-        t.add_column("Command", style=ACCENT)
+        case, co = self.case, self.case.company
+        v = dcf_value(case)
+        g = implied_growth(case)
+        tag = "  [FICTIONAL EXAMPLE]" if co.fictional else ""
+        self.query_one("#dcf-title", Static).update(
+            Text.assemble(
+                (f"DCF · {co.name} ({co.ticker}){tag}", "bold " + c("accent")),
+                ("\n" + valuation_label(v.upside), c("muted")),
+                (" · illustrative, not investment advice", c("muted")),
+            )
+        )
+        mt = self.query_one("#dcf-metrics", DataTable)
+        mt.add_columns("Metric", "Value")
+        rows = [
+            ("Price", f"{co.price:,.2f} {co.currency}"),
+            ("DCF value / share", f"{v.per_share:,.2f}"),
+            ("Upside", signed(f"{v.upside:+.1%}", v.upside)),
+            ("WACC", f"{v.wacc:.2%}"),
+            ("Terminal growth", f"{v.terminal_growth:.2%}"),
+            ("Terminal value / EV", f"{v.terminal_share:.0%}"),
+            ("Price implies growth", "—" if g != g else f"{g:.1%} / yr"),
+            ("Enterprise value", f"{v.enterprise_value:,.0f}m"),
+        ]
+        for label, val in rows:
+            mt.add_row(label, val)
+        st = self.query_one("#dcf-scenarios", DataTable)
+        st.add_columns("Scenario", "Value / share", "Upside", "WACC", "g")
+        for name, r in scenario_table(case).iterrows():
+            st.add_row(
+                str(name),
+                f"{r.per_share:,.2f}",
+                signed(f"{r.upside:+.1%}", r.upside),
+                f"{r.wacc:.2%}",
+                f"{r.terminal_growth:.2%}",
+            )
+        sens = sensitivity(case)
+        sv = self.query_one("#dcf-sens", DataTable)
+        sv.add_column("")
+        for gcol in sens.columns:
+            sv.add_column(f"g {gcol:.1%}", width=9)
+        for r, row in sens.iterrows():
+            # colour = value vs price: blue above, red below (+-50% is full colour)
+            cells = [heat((x / co.price - 1) * 2, _cell(x, "{:,.2f}")) for x in row]
+            sv.add_row(Text(f"WACC {r:.2%}", c("accent")), *cells)
+        ct = self.query_one("#dcf-comps", DataTable)
+        ct.add_columns("Peer", "EV/EBITDA", "P/E", "Value (EV/EBITDA)", "Value (P/E)")
+        for row in comps_table(case).itertuples(index=False):
+            ct.add_row(
+                str(row.peer),
+                _cell(row.ev_ebitda, "{:.1f}x"),
+                _cell(row.pe, "{:.1f}x"),
+                _cell(row.value_ev_ebitda, "{:,.2f}"),
+                _cell(row.value_pe, "{:,.2f}"),
+            )
+
+
+KEYS = [
+    ("F1 / F2 / F3", "Help / Watchlist / Strategy lab"),
+    ("F4 / F5 / F6", "Risk / Robustness (last backtest) / DCF example"),
+    ("Ctrl+T", "Next colour theme (dark, amber, light)"),
+    ("Esc", "Back"),
+    ("/", "Focus the command bar"),
+    ("Ctrl+R", "Run the backtest (in the lab)"),
+    ("Ctrl+P", "Textual command palette"),
+    ("Ctrl+Q", "Quit"),
+]
+EXAMPLES = [
+    "AAPL                              quote for a ticker",
+    "CHART SPY 5Y                      price with SMA 50 / 200",
+    "BT pairs-coint entry_z=2.5        backtest with a changed parameter",
+    "ROBUST gbm-long-short             is the edge real?",
+    "RISK min_var 126                  minimum-variance weights, 6-month window",
+    "DCF my_case.json                  value your own case file",
+]
+
+
+class HelpScreen(QSScreen):
+    def compose_body(self) -> ComposeResult:
+        with VerticalScroll(id="help-scroll"):
+            yield Static(id="help", classes="panel")
+
+    def on_mount(self) -> None:
+        self.refresh_view()
+
+    def refresh_view(self) -> None:
+        state = self.qs.state
+        t = Table(
+            title="QS Terminal",
+            caption=(
+                f"data: {state.source} · theme: {state.theme.removeprefix('qs-')} · "
+                "backtests and valuations are illustrations, not forecasts"
+            ),
+            expand=False,
+            show_lines=False,
+        )
+        t.add_column("Command", style=c("accent"), no_wrap=True)
         t.add_column("What it does")
-        for usage, desc in COMMANDS.values():
-            # Text(), not str: "[key=value ...]" would otherwise be parsed as Rich markup.
-            t.add_row(Text(usage), Text(desc))
+        for group, names in COMMAND_GROUPS.items():
+            t.add_row(Text(group, style="bold " + c("line")), "")
+            for n in names:
+                usage, desc = COMMANDS[n]
+                # Text(), not str: "[key=value ...]" would otherwise be parsed as Rich markup.
+                t.add_row(Text("  " + usage), Text(desc))
         t.add_row("", "")
-        t.add_row("F1 … F5", "Help / Watchlist / Strategy lab / Risk / Robustness")
-        t.add_row("Esc", "Back")
-        t.add_row("/", "Focus the command bar")
-        t.add_row("Ctrl+Q", "Quit")
+        t.add_row(Text("Keys", style="bold " + c("line")), "")
+        for k, d in KEYS:
+            t.add_row(Text("  " + k), Text(d))
+        t.add_row("", "")
+        t.add_row(Text("Examples", style="bold " + c("line")), "")
+        for e in EXAMPLES:
+            cmd, _, what = e.partition("  ")
+            t.add_row(Text("  " + cmd.strip()), Text(what.strip(), style=c("muted")))
         self.query_one("#help", Static).update(t)
