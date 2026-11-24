@@ -1,5 +1,6 @@
 """Performance metrics, factor IC analysis, deflated Sharpe and tear sheets."""
 
+from quantskills.eval.bayes import BayesianSharpe, bayesian_sharpe
 from quantskills.eval.ic import ic_summary, information_coefficient, quantile_returns
 from quantskills.eval.metrics import (
     TRADING_DAYS,
@@ -22,6 +23,8 @@ from quantskills.eval.tearsheet import format_tear_sheet, plot_tear_sheet, tear_
 
 __all__ = [
     "TRADING_DAYS",
+    "BayesianSharpe",
+    "bayesian_sharpe",
     "DeflatedSharpe",
     "annualized_return",
     "annualized_volatility",

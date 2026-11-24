@@ -23,6 +23,7 @@ from quantskills.terminal.screens import (
     HelpScreen,
     QuoteScreen,
     ResultsScreen,
+    RiskScreen,
     StrategyLabScreen,
     WatchlistScreen,
 )
@@ -48,6 +49,10 @@ PlotextPlot { height: 1fr; }
 #run-row .status { width: 1fr; padding: 1 2; }
 #metrics { width: 44; }
 #quote { height: auto; width: 50; margin: 0 2; }
+#risk-top { height: 1fr; }
+#risk-weights { width: 1fr; }
+#risk-metrics { width: 40; }
+#risk-corr { height: auto; max-height: 16; }
 """
 
 
@@ -58,6 +63,7 @@ class QSTerminal(App):
         Binding("f1", "command('HELP')", "Help"),
         Binding("f2", "command('WATCH')", "Watchlist"),
         Binding("f3", "command('STRAT')", "Lab"),
+        Binding("f4", "command('RISK')", "Risk"),
         Binding("ctrl+q", "quit", "Quit"),
     ]
 
@@ -177,7 +183,9 @@ class QSTerminal(App):
             self.notify(self.state.message, title=f"Data: {self.state.source}")
 
     def _cmd_risk(self, cmd: Command) -> None:
-        self.notify("RISK arrives in Phase 3 with the portfolio-risk skill.", severity="warning")
+        if self._have_data():
+            method, lookback = cmd.args
+            self.push_screen(RiskScreen(method, int(lookback)))
 
     def _cmd_robust(self, cmd: Command) -> None:
         self.notify("ROBUST arrives in Phase 4 with the robustness skill.", severity="warning")

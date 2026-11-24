@@ -16,6 +16,10 @@ before it goes into a model or strategy.
 - `compute_factors(close, names)` returns `{name: DataFrame}`.
 - `zscore_cross_section`, `rank_cross_section`: per-date normalisation.
 - Label: `forward_returns(close, horizon)`, the return from *t* to *t+h*, stored at *t*.
+- ML panels (`features/panel.py`): `feature_panel(close, names)` gives long
+  `(date, ticker)` features from `ML_FEATURES` (momentum 12-1 / 6-1, reversal 5 / 21,
+  vol 21 / 63, distance from SMA50), z-scored per date. `label_panel(close, h, kind)`
+  gives the matching label. `to_panel` / `from_panel` convert between wide and long.
 
 ## Steps
 1. `factors = compute_factors(close)`

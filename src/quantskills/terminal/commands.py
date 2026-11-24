@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from quantskills.data.views import PERIODS
+from quantskills.portfolio import ALLOCATORS
 
 
 class CommandError(ValueError):
@@ -37,7 +38,10 @@ COMMANDS: dict[str, tuple[str, str]] = {
     "BT": ("BT <strategy> [key=value ...]", "Run a backtest now and show results"),
     "RESULTS": ("RESULTS", "Re-open the last backtest's results"),
     "DATA": ("DATA DEMO|CACHE", "Switch between synthetic demo data and the local cache"),
-    "RISK": ("RISK", "Portfolio risk screen (Phase 3)"),
+    "RISK": (
+        "RISK [hrp|min_var|inverse_vol|equal|eigen] [lookback]",
+        "Portfolio weights, VaR/CVaR and correlation heatmap",
+    ),
     "ROBUST": ("ROBUST <strategy>", "Robustness report (Phase 4)"),
     "HELP": ("HELP", "This list"),
     "QUIT": ("QUIT", "Exit the terminal"),
@@ -66,6 +70,18 @@ def parse_params(tokens: list[str]) -> dict[str, Any]:
     return params
 
 
+def _parse_risk(rest: list[str]) -> Command:
+    if len(rest) > 2:
+        raise CommandError("usage: " + COMMANDS["RISK"][0])
+    method = rest[0].lower() if rest else "hrp"
+    if method not in ALLOCATORS:
+        raise CommandError(f"unknown method {rest[0]!r}; choose from {', '.join(ALLOCATORS)}")
+    lookback = rest[1] if len(rest) == 2 else "252"
+    if not lookback.isdigit() or int(lookback) < 20:
+        raise CommandError("lookback must be a whole number of days >= 20")
+    return Command("RISK", (method, lookback))
+
+
 def parse_command(text: str) -> Command:
     tokens = text.strip().split()
     if not tokens:
@@ -79,7 +95,9 @@ def parse_command(text: str) -> Command:
             return Command("QUOTE", (head,))
         raise CommandError(f"unknown command {tokens[0]!r}; type HELP")
 
-    if name in {"WATCH", "HELP", "QUIT", "RISK", "RESULTS"}:
+    if name == "RISK":
+        return _parse_risk(rest)
+    if name in {"WATCH", "HELP", "QUIT", "RESULTS"}:
         if rest:
             raise CommandError(f"{name} takes no arguments")
         return Command(name)

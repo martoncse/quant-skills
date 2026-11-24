@@ -18,6 +18,8 @@ from quantskills.terminal.fmt import sparkline
         ("STRAT Factor-Long-Short", Command("STRAT", ("factor-long-short",))),
         ("data demo", Command("DATA", ("DEMO",))),
         ("w", Command("WATCH")),
+        ("risk", Command("RISK", ("hrp", "252"))),
+        ("RISK MIN_VAR 126", Command("RISK", ("min_var", "126"))),
     ],
 )
 def test_parse_ok(text, expected):
@@ -34,7 +36,8 @@ def test_parse_bt_params():
 @pytest.mark.parametrize(
     "text",
     ["", "   ", "chart", "chart spy 7Y", "quote a b", "bt", "bt x quantile", "data web",
-     "help me", "foo bar"],
+     "help me", "foo bar", "risk bogus", "risk hrp x", "risk hrp 10",
+     "risk hrp 100 extra"],
 )  # fmt: skip
 def test_parse_errors(text):
     with pytest.raises(CommandError):

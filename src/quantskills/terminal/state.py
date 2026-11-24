@@ -30,7 +30,9 @@ class TerminalState:
         """Load ``"cache"`` (offline parquet cache) or ``"demo"`` (synthetic)."""
         source = source.lower()
         if source == "demo":
-            self.prices = synthetic_prices(n_assets=30, n_days=1260, seed=0)
+            self.prices = synthetic_prices(
+                n_assets=30, n_days=1260, seed=0, n_pairs=3, garch_index=True
+            )
             self.source = "demo"
             self.message = "Synthetic demo data: illustrations only, not market data."
         elif source == "cache":

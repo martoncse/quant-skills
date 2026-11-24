@@ -40,3 +40,22 @@ def signed(text: str, value: float | None) -> Text:
     if value is None or _bad(value) or value == 0:
         return Text(text, style=MUTED)
     return Text(text, style=UP if value > 0 else DOWN)
+
+
+def _blend(a: str, b: str, t: float) -> str:
+    ca = [int(a[i : i + 2], 16) for i in (1, 3, 5)]
+    cb = [int(b[i : i + 2], 16) for i in (1, 3, 5)]
+    return "#" + "".join(f"{round(x + (y - x) * t):02x}" for x, y in zip(ca, cb, strict=True))
+
+
+HEAT_BASE, HEAT_POS, HEAT_NEG = "#161b22", "#1f6feb", "#da3633"
+
+
+def heat(value: float, text: str | None = None) -> Text:
+    """A heatmap cell for a value in [-1, 1]: blue for positive, red for negative."""
+    if _bad(value):
+        return Text(text or "—", style=MUTED)
+    t = min(abs(float(value)), 1.0) ** 0.6  # gamma: make modest correlations visible
+    bg = _blend(HEAT_BASE, HEAT_POS if value >= 0 else HEAT_NEG, t)
+    fg = "#ffffff" if t > 0.45 else "#c9d1d9"
+    return Text(text if text is not None else f"{value:+.2f}", style=f"{fg} on {bg}")

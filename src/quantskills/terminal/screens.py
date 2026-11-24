@@ -31,9 +31,10 @@ from quantskills.backtest import CostModel
 from quantskills.data import period_window, quote_detail, quote_table, to_wide
 from quantskills.eval import drawdown_series, tear_sheet
 from quantskills.features import sma
+from quantskills.portfolio import RiskView, risk_view
 from quantskills.strategies import STRATEGIES, Strategy, StrategyRun, get_strategy, run_strategy
 from quantskills.terminal.commands import COMMANDS, parse_value
-from quantskills.terminal.fmt import DOWN, MUTED, UP, num, pct, signed, sparkline
+from quantskills.terminal.fmt import DOWN, MUTED, UP, heat, num, pct, signed, sparkline
 from quantskills.utils import holdout_date
 
 if TYPE_CHECKING:
@@ -222,7 +223,7 @@ class StrategyLabScreen(QSScreen):
         self, name: str | None = None, params: dict[str, Any] | None = None, autorun: bool = False
     ) -> None:
         super().__init__()
-        self.names = sorted(STRATEGIES)
+        self.names = list(STRATEGIES)  # book order, #1 first
         self.current = name or self.names[0]
         self._overrides = dict(params or {})
         self._autorun = autorun
@@ -414,6 +415,84 @@ class ResultsScreen(QSScreen):
             )
 
 
+RISK_ROWS = [
+    ("Ann. vol", "ann_vol", "{:.2%}"),
+    ("Max drawdown", "max_drawdown", "{:.2%}"),
+    ("VaR 95% (hist)", "var_hist_95", "{:.2%}"),
+    ("CVaR 95% (hist)", "cvar_hist_95", "{:.2%}"),
+    ("VaR 95% (Gauss)", "var_gauss_95", "{:.2%}"),
+    ("VaR 99% (hist)", "var_hist_99", "{:.2%}"),
+    ("CVaR 99% (hist)", "cvar_hist_99", "{:.2%}"),
+    ("VaR 99% (Cornish-F.)", "var_cf_99", "{:.2%}"),
+    ("Days in window", "n_days", "{:.0f}"),
+]
+
+
+class RiskScreen(QSScreen):
+    """Weights, VaR/CVaR and a correlation heatmap. Computed in a worker thread."""
+
+    def __init__(self, method: str = "hrp", lookback: int = 252) -> None:
+        super().__init__()
+        self.method = method
+        self.lookback = lookback
+
+    def compose_body(self) -> ComposeResult:
+        yield Static(f"Computing {self.method} weights…", id="risk-title", classes="status")
+        with Horizontal(id="risk-top"):
+            yield DataTable(id="risk-weights", zebra_stripes=True, cursor_type="none")
+            yield DataTable(id="risk-metrics", cursor_type="none")
+        yield Static(_label("Correlation (Ledoit-Wolf), top holdings in cluster order"))
+        yield DataTable(id="risk-corr", cursor_type="none")
+
+    def on_mount(self) -> None:
+        prices = self.qs.state.prices
+        if prices is None:
+            self.query_one("#risk-title", Static).update(Text("No data loaded.", style=DOWN))
+            return
+        self._compute(prices, self.method, self.lookback)
+
+    @work(thread=True, exclusive=True, group="risk")
+    def _compute(self, prices: pd.DataFrame, method: str, lookback: int) -> None:
+        try:
+            view = risk_view(prices, method, lookback)
+        except Exception as exc:
+            self.app.call_from_thread(self._failed, str(exc))
+            return
+        self.app.call_from_thread(self._show, view)
+
+    def _failed(self, error: str) -> None:
+        self.query_one("#risk-title", Static).update(Text(f"Failed: {error}", style=DOWN))
+        self.qs.report_error(f"Risk failed: {error}")
+
+    def _show(self, v: RiskView) -> None:
+        caption = (
+            f"\n{v.lookback} days {v.start.date()} → {v.end.date()} · 1-day VaR as loss · "
+            "historical, not a forecast"
+        )
+        self.query_one("#risk-title", Static).update(
+            Text.assemble((f"RISK · {v.method}", "bold " + ACCENT), (caption, MUTED))
+        )
+        wt = self.query_one("#risk-weights", DataTable)
+        wt.add_columns("Ticker", "Weight", "Vol", "Risk %")
+        for ticker, row in v.table.iterrows():
+            wt.add_row(
+                str(ticker),
+                signed(f"{row.weight:+.1%}", row.weight),
+                f"{row.ann_vol:.1%}",
+                f"{row.risk_contrib:.1%}",
+            )
+        mt = self.query_one("#risk-metrics", DataTable)
+        mt.add_columns("Metric", "Portfolio")
+        for label, key, fmt in RISK_ROWS:
+            mt.add_row(label, _cell(v.metrics.get(key), fmt))
+        ct = self.query_one("#risk-corr", DataTable)
+        ct.add_column("")
+        for t in v.corr.columns:
+            ct.add_column(str(t)[:7], width=7)
+        for t, row in v.corr.iterrows():
+            ct.add_row(Text(str(t), style=ACCENT), *(heat(x) for x in row))
+
+
 class HelpScreen(QSScreen):
     def compose_body(self) -> ComposeResult:
         yield Static(id="help", classes="panel")
@@ -426,7 +505,7 @@ class HelpScreen(QSScreen):
             # Text(), not str: "[key=value ...]" would otherwise be parsed as Rich markup.
             t.add_row(Text(usage), Text(desc))
         t.add_row("", "")
-        t.add_row("F1 / F2 / F3", "Help / Watchlist / Strategy lab")
+        t.add_row("F1 / F2 / F3 / F4", "Help / Watchlist / Strategy lab / Risk")
         t.add_row("Esc", "Back")
         t.add_row("/", "Focus the command bar")
         t.add_row("Ctrl+Q", "Quit")

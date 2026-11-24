@@ -1,8 +1,13 @@
-"""Fit a strategy on the training window and backtest it with costs.
+r"""Fit a strategy on the training window and backtest it with costs.
 
 uv run python skills/backtesting/scripts/run_backtest.py
 uv run python skills/backtesting/scripts/run_backtest.py --data cache --plot out.png
 uv run python skills/backtesting/scripts/run_backtest.py --param quantile=0.1
+uv run python skills/backtesting/scripts/run_backtest.py --strategy pairs-coint \
+    --data synthetic-plus
+
+``synthetic-plus`` adds 3 cointegrated pairs and a GARCH-volatility index (``IDX``)
+to the synthetic panel, so the pairs and volatility-timing strategies have something to find.
 """
 
 import argparse
@@ -25,8 +30,8 @@ def _parse(kv: str) -> tuple[str, object]:
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    p.add_argument("--strategy", choices=sorted(STRATEGIES), default="factor-long-short")
-    p.add_argument("--data", choices=["synthetic", "cache"], default="synthetic")
+    p.add_argument("--strategy", choices=list(STRATEGIES), default="factor-long-short")
+    p.add_argument("--data", choices=["synthetic", "synthetic-plus", "cache"], default="synthetic")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--test-fraction", type=float, default=0.3)
     p.add_argument("--commission-bps", type=float, default=5.0)
@@ -36,7 +41,12 @@ def main() -> None:
     p.add_argument("--plot", default=None, help="save an equity/drawdown PNG here")
     a = p.parse_args()
 
-    prices = load_cached() if a.data == "cache" else synthetic_prices(seed=a.seed)
+    if a.data == "cache":
+        prices = load_cached()
+    elif a.data == "synthetic-plus":
+        prices = synthetic_prices(seed=a.seed, n_pairs=3, garch_index=True)
+    else:
+        prices = synthetic_prices(seed=a.seed)
     train_end = holdout_date(prices.index.get_level_values("date"), a.test_fraction)
     strat = get_strategy(a.strategy, **dict(_parse(kv) for kv in a.param))
     run = run_strategy(strat, prices, train_end, CostModel(a.commission_bps, a.slippage_bps))

@@ -6,12 +6,14 @@ import pytest
 from textual.widgets import DataTable, Input, OptionList
 
 from quantskills.data import synthetic_prices
+from quantskills.strategies import STRATEGIES
 from quantskills.terminal.app import QSTerminal
 from quantskills.terminal.screens import (
     ChartScreen,
     HelpScreen,
     QuoteScreen,
     ResultsScreen,
+    RiskScreen,
     StrategyLabScreen,
     WatchlistScreen,
 )
@@ -22,6 +24,12 @@ SIZE = (120, 40)
 @pytest.fixture(scope="module")
 def small_prices():
     return synthetic_prices(n_assets=12, n_days=600, seed=3)
+
+
+@pytest.fixture(scope="module")
+def rich_prices():
+    """Enough structure for every strategy: pairs to find, a GARCH index to time."""
+    return synthetic_prices(n_assets=15, n_days=700, seed=3, n_pairs=2, garch_index=True)
 
 
 async def _type(pilot, text: str) -> None:
@@ -49,7 +57,8 @@ def test_empty_cache_shows_clear_message(tmp_path):
             assert "No data" in app.state.last_error
             await _type(pilot, "DATA DEMO")
             assert app.state.source == "demo"
-            assert app.screen.query_one("#watch", DataTable).row_count == 30
+            # 30 synthetic stocks + 3 cointegrated pairs + a GARCH index
+            assert app.screen.query_one("#watch", DataTable).row_count == 37
 
     run(flow())
 
@@ -146,5 +155,62 @@ def test_lab_reports_invalid_settings(small_prices):
             await pilot.pause()
             assert "Invalid settings" in app.state.last_error
             assert isinstance(app.screen, StrategyLabScreen)
+
+    run(flow())
+
+
+def test_risk_screen_shows_weights_var_and_heatmap(rich_prices):
+    async def flow():
+        app = QSTerminal(prices=rich_prices)
+        async with app.run_test(size=SIZE) as pilot:
+            await _type(pilot, "RISK")
+            assert isinstance(app.screen, RiskScreen)
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+            screen = app.screen
+            assert screen.query_one("#risk-weights", DataTable).row_count == 20
+            assert screen.query_one("#risk-metrics", DataTable).row_count >= 8
+            corr = screen.query_one("#risk-corr", DataTable)
+            assert corr.row_count == 12 and len(corr.columns) == 13
+            metrics = screen.query_one("#risk-metrics", DataTable)
+            assert metrics.get_row_at(2)[0] == "VaR 95% (hist)"
+            await pilot.press("escape")
+            await _type(pilot, "RISK min_var 126")
+            await app.workers.wait_for_complete()
+            assert app.screen.method == "min_var" and app.screen.lookback == 126
+            await _type(pilot, "RISK magic")
+            assert "unknown method" in app.state.last_error
+            await _type(pilot, "RISK hrp 5")
+            assert "lookback" in app.state.last_error
+
+    run(flow())
+
+
+def test_risk_screen_reports_bad_window(small_prices):
+    async def flow():
+        app = QSTerminal(prices=small_prices)
+        async with app.run_test(size=SIZE) as pilot:
+            await _type(pilot, "RISK hrp 5000")
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+            # 600 days of data: the window is clipped to what exists, not an error
+            assert app.screen.query_one("#risk-weights", DataTable).row_count == 12
+
+    run(flow())
+
+
+@pytest.mark.parametrize("name", list(STRATEGIES))
+def test_every_strategy_runs_from_the_terminal(name, rich_prices):
+    fast = {"gbm-long-short": " max_rounds=30", "unsupervised-risk": " lookback=126"}
+
+    async def flow():
+        app = QSTerminal(prices=rich_prices)
+        async with app.run_test(size=SIZE) as pilot:
+            await _type(pilot, f"BT {name}{fast.get(name, '')}")
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+            assert app.state.last_error == ""
+            assert isinstance(app.screen, ResultsScreen), name
+            assert app.state.last_run.strategy.name == name
 
     run(flow())

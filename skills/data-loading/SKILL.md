@@ -15,7 +15,9 @@ for checking that a method recovers a planted signal and finds nothing in noise.
   `FileNotFoundError` when the cache is empty.
 - `synthetic_prices(n_assets, n_days, seed, drift_vol=...) -> DataFrame`:
   one-factor model plus persistent per-asset drift (a planted momentum effect).
-  `drift_vol=0` gives a no-signal null panel.
+  `drift_vol=0` gives a no-signal null panel. `n_pairs=k` appends k cointegrated
+  pairs (`PAIRkA/B`); `garch_index=True` appends `IDX` with GARCH(1,1) volatility.
+  Neither changes the main panel.
 - Output convention (checked by `validate_prices`):
   - index `MultiIndex(date, ticker)`, dates tz-naive, sorted ascending, no duplicates
   - columns `open, high, low, close, volume`; prices split/dividend adjusted

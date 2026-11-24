@@ -25,6 +25,7 @@ import pandas as pd
 from quantskills.data.loader import to_wide
 from quantskills.eval.ic import information_coefficient
 from quantskills.features.factors import compute_factors, forward_returns, zscore_cross_section
+from quantskills.strategies._weights import quantile_long_short
 from quantskills.strategies.base import Strategy
 
 
@@ -96,26 +97,7 @@ class FactorLongShort(Strategy):
         return pd.DataFrame(blended, index=close.index, columns=close.columns)
 
     def signals(self, data: pd.DataFrame) -> pd.DataFrame:
-        score = self.composite(data)
-        q, gross = self.params["quantile"], self.params["gross"]
-        valid = score.notna().sum(axis=1)
-        tradable = valid >= self.params["min_assets"]
-        weights = pd.DataFrame(np.nan, index=score.index, columns=score.columns)
-        if not tradable.any():
-            return weights.fillna(0.0)
-
-        first = int(np.argmax(tradable.to_numpy()))
-        step = self.params["rebalance_days"]
-        rebal_dates = score.index[first::step]
-
-        ranks = score.loc[rebal_dates].rank(axis=1, pct=True)
-        longs = ranks > 1.0 - q
-        shorts = ranks <= q
-        n_long = longs.sum(axis=1).replace(0, np.nan)
-        n_short = shorts.sum(axis=1).replace(0, np.nan)
-        w = longs.astype(float).div(n_long, axis=0) - shorts.astype(float).div(n_short, axis=0)
-        w = (w * gross / 2.0).fillna(0.0)
-        w.loc[~tradable.loc[rebal_dates]] = 0.0
-        weights.loc[rebal_dates] = w
-        weights.iloc[:first] = 0.0
-        return weights
+        p = self.params
+        return quantile_long_short(
+            self.composite(data), p["quantile"], p["gross"], p["rebalance_days"], p["min_assets"]
+        )
