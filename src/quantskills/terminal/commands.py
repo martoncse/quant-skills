@@ -4,6 +4,7 @@ Examples::
 
     QUOTE AAPL        CHART SPY 1Y        STRAT factor-long-short
     BT factor-long-short quantile=0.1 rebalance_days=5
+    ROBUST pairs-coint entry_z=2.5      RISK hrp 252
     WATCH             DATA DEMO           HELP
     AAPL              (a bare ticker means QUOTE AAPL)
 """
@@ -42,7 +43,10 @@ COMMANDS: dict[str, tuple[str, str]] = {
         "RISK [hrp|min_var|inverse_vol|equal|eigen] [lookback]",
         "Portfolio weights, VaR/CVaR and correlation heatmap",
     ),
-    "ROBUST": ("ROBUST <strategy>", "Robustness report (Phase 4)"),
+    "ROBUST": (
+        "ROBUST [strategy] [key=value ...]",
+        "Robustness: DSR, PBO, noise/delay/sensitivity, regimes, verdict",
+    ),
     "HELP": ("HELP", "This list"),
     "QUIT": ("QUIT", "Exit the terminal"),
 }
@@ -116,6 +120,8 @@ def parse_command(text: str) -> Command:
         if len(rest) > 1:
             raise CommandError("usage: " + COMMANDS["STRAT"][0])
         return Command(name, tuple(t.lower() for t in rest))
+    if name == "ROBUST" and not rest:
+        return Command(name)  # the app picks the last-run strategy
     if name in {"BT", "ROBUST"}:
         if not rest:
             raise CommandError("usage: " + COMMANDS[name][0])

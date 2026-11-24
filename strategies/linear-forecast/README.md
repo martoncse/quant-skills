@@ -45,6 +45,22 @@ Hold-out 90% Bayesian credible interval for ridge's Sharpe: [-1.42, 1.26].
   gap is the same one strategy #1 shows.
 - Costs take 0.2 Sharpe at this turnover. Monthly quintile books trade about 13x a year.
 
+## Robustness
+Verdict: **RED** (`uv run python skills/robustness/scripts/robustness_report.py --strategy linear-forecast`). Every check runs walk-forward inside the training window except the last row. Method: [docs/robustness.md](../../docs/robustness.md).
+
+| Check | Value | Rule | Status |
+|---|---|---|---|
+| Deflated Sharpe | 0.375 (SR 0.62 vs 0.86, N=10) | ≥ 0.95 green, ≥ 0.5 amber | red |
+| PBO (CSCV) | 0.54, P(loss) 0.29, 9 configs | PBO ≤ 0.25 or P(loss) ≤ 0.1 green | amber |
+| Sensitivity (worst / base) | -0.68 kept (worst SR -0.42) | ≥ 0.5 green, ≥ 0.0 amber | red |
+| Price noise 25 bps | 0.99 kept (SR 0.62) | ≥ 0.75 green, ≥ 0.4 amber | green |
+| Trade 1 day late | 0.92 kept (SR 0.57) | ≥ 0.75 green, ≥ 0.4 amber | green |
+| Worst regime Sharpe | -0.35 (down trend) | ≥ 0.0 green, ≥ -1.0 amber | amber |
+| Walk-forward / in-sample | 0.51 (SR 1.23 → 0.62) | ≥ 0.5 green, ≥ 0.0 amber | green |
+| Hold-out / in-sample | -0.06 (SR 1.23 → -0.07) | ≥ 0.5 green, ≥ 0.0 amber | red |
+
+The training window already shows the problem: walk-forward halves the Sharpe (1.23 → 0.62), the deflated Sharpe is red, and one corner of the grid loses money. The hold-out (-0.07) confirms it.
+
 ## Failure modes
 - **Linear in a non-linear world:** interactions (e.g. momentum only in calm names)
   are invisible to it. Strategy #6 tests whether trees find them.
@@ -56,4 +72,3 @@ Hold-out 90% Bayesian credible interval for ridge's Sharpe: [-1.42, 1.26].
 
 ## Next steps
 - Walk-forward refits (`walk_forward_splits`) instead of a single split.
-- Robustness report (PBO, perturbation) in Phase 4.

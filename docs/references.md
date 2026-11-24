@@ -21,7 +21,7 @@ on 2026-11-23. Ideas only. No code or prose is copied.
 
 Skills map: `data-loading` → ch. 2; `features-alpha` → ch. 7–8; `models` → ch. 6–7, 11–12;
 `backtesting` → ch. 6, 16, 18; `evaluation` → ch. 7, 16; `portfolio-risk` → ch. 14, 17, 19;
-`robustness` → ch. 16 (overfitting tests).
+`robustness` → ch. 16 (overfitting tests, strategy evaluation).
 
 Code for strategies #1–#7: `src/quantskills/strategies/` (`factor_long_short`, `linear_forecast`,
 `pairs_coint`, `vol_timing`, `bayes_pairs`, `gbm_long_short`, `unsupervised_risk`).
@@ -31,7 +31,11 @@ Strategy #5 uses an exact conjugate posterior for the Bayesian Sharpe instead of
 ## Papers
 - Bailey, D. & López de Prado, M. (2012). The Sharpe Ratio Efficient Frontier. *J. of Risk*. (PSR)
 - Bailey, D. & López de Prado, M. (2014). The Deflated Sharpe Ratio. *J. of Portfolio Management*.
-- Bailey, Borwein, López de Prado & Zhu (2016). The Probability of Backtest Overfitting. (PBO, Phase 4)
+- Bailey, Borwein, López de Prado & Zhu (2017). The Probability of Backtest Overfitting. *J. of Computational Finance*. (CSCV / PBO)
+- Brier, G. (1950). Verification of Forecasts Expressed in Terms of Probability. *Monthly Weather Review*. (Brier score)
+- Murphy, A. (1973). A New Vector Partition of the Probability Score. *J. of Applied Meteorology*. (reliability / resolution)
+- Guo, C., Pleiss, G., Sun, Y. & Weinberger, K. (2017). On Calibration of Modern Neural Networks. *ICML*. (ECE)
+- Harvey, C. & Liu, Y. (2015). Backtesting. *J. of Portfolio Management*. (haircut Sharpe, multiple testing)
 - Jegadeesh, N. & Titman, S. (1993). Returns to Buying Winners and Selling Losers. (momentum)
 - Ang, Hodrick, Xing & Zhang (2006). The Cross-Section of Volatility and Expected Returns. (low vol)
 - López de Prado, M. (2018). *Advances in Financial Machine Learning*. Wiley. (purged CV, DSR)

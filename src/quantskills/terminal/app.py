@@ -24,6 +24,7 @@ from quantskills.terminal.screens import (
     QuoteScreen,
     ResultsScreen,
     RiskScreen,
+    RobustScreen,
     StrategyLabScreen,
     WatchlistScreen,
 )
@@ -53,6 +54,10 @@ PlotextPlot { height: 1fr; }
 #risk-weights { width: 1fr; }
 #risk-metrics { width: 40; }
 #risk-corr { height: auto; max-height: 16; }
+#robust-top { height: 1fr; }
+#robust-checks { width: 3fr; }
+#robust-side { width: 2fr; }
+#robust-side DataTable { height: auto; max-height: 12; }
 """
 
 
@@ -64,6 +69,7 @@ class QSTerminal(App):
         Binding("f2", "command('WATCH')", "Watchlist"),
         Binding("f3", "command('STRAT')", "Lab"),
         Binding("f4", "command('RISK')", "Risk"),
+        Binding("f5", "command('ROBUST')", "Robust"),
         Binding("ctrl+q", "quit", "Quit"),
     ]
 
@@ -188,7 +194,23 @@ class QSTerminal(App):
             self.push_screen(RiskScreen(method, int(lookback)))
 
     def _cmd_robust(self, cmd: Command) -> None:
-        self.notify("ROBUST arrives in Phase 4 with the robustness skill.", severity="warning")
+        if not self._have_data():
+            return
+        if cmd.args:
+            name, params = cmd.args[0], cmd.params
+            if not self._have_strategy(name):
+                return
+        elif self.state.last_run is not None:  # F5: the strategy you just backtested
+            last = self.state.last_run.strategy
+            name, params = last.name, dict(last.params)
+        else:
+            name, params = "factor-long-short", {}
+        try:
+            strategy = get_strategy(name, **params)
+        except (TypeError, ValueError) as exc:
+            self.report_error(str(exc))
+            return
+        self.push_screen(RobustScreen(strategy))
 
     def _cmd_help(self, cmd: Command) -> None:
         self.push_screen(HelpScreen())

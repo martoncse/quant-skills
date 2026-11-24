@@ -20,6 +20,9 @@ from quantskills.terminal.fmt import sparkline
         ("w", Command("WATCH")),
         ("risk", Command("RISK", ("hrp", "252"))),
         ("RISK MIN_VAR 126", Command("RISK", ("min_var", "126"))),
+        ("robust", Command("ROBUST")),
+        ("ROBUST Pairs-Coint", Command("ROBUST", ("pairs-coint",))),
+        ("robust pairs-coint entry_z=2.5", Command("ROBUST", ("pairs-coint",), {"entry_z": 2.5})),
     ],
 )
 def test_parse_ok(text, expected):
@@ -37,7 +40,7 @@ def test_parse_bt_params():
     "text",
     ["", "   ", "chart", "chart spy 7Y", "quote a b", "bt", "bt x quantile", "data web",
      "help me", "foo bar", "risk bogus", "risk hrp x", "risk hrp 10",
-     "risk hrp 100 extra"],
+     "risk hrp 100 extra", "robust pairs-coint entry_z"],
 )  # fmt: skip
 def test_parse_errors(text):
     with pytest.raises(CommandError):

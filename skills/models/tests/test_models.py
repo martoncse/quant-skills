@@ -5,7 +5,14 @@ from sklearn.linear_model import Ridge
 
 from quantskills.data import to_wide
 from quantskills.features import feature_panel, label_panel
-from quantskills.models import cv_score, dropna_xy, fit_lgbm_cv, panel_ic, shap_importance
+from quantskills.models import (
+    cv_score,
+    dropna_xy,
+    fit_lgbm_cv,
+    oof_predictions,
+    panel_ic,
+    shap_importance,
+)
 from quantskills.utils import purged_kfold, walk_forward_splits
 
 DATES = pd.bdate_range("2020-01-01", periods=200)
@@ -73,3 +80,27 @@ def test_lgbm_cv_and_shap(xy):
     # SHAP contributions + bias reproduce the prediction exactly
     contrib = booster.predict(X.iloc[:50], pred_contrib=True)
     np.testing.assert_allclose(contrib.sum(axis=1), booster.predict(X.iloc[:50]), rtol=1e-6)
+
+
+class _Recorder:
+    """A model that predicts the latest training date it saw (as an ordinal)."""
+
+    def fit(self, X, y):
+        self.last_ = X.index.get_level_values("date").max().toordinal()
+        return self
+
+    def predict(self, X):
+        return np.full(len(X), float(self.last_))
+
+
+def test_oof_predictions_come_from_models_fit_on_the_past():
+    idx = pd.MultiIndex.from_product([DATES, ["A", "B"]], names=["date", "ticker"])
+    X = pd.DataFrame({"f": np.arange(len(idx), dtype=float)}, index=idx)
+    y = pd.Series(0.0, index=idx, name="y")
+    h = 10
+    pred = oof_predictions(_Recorder, X, y, n_splits=3, horizon=h, min_train_frac=0.4)
+    pred_dates = pred.index.get_level_values("date")
+    assert pred_dates.min() >= DATES[80] and pred_dates.max() == DATES[-1]
+    for d, last_fit in zip(pred_dates, pred.to_numpy(), strict=True):
+        # the model that predicted day d stopped training more than h dates earlier
+        assert DATES.get_loc(d) - DATES.get_loc(pd.Timestamp.fromordinal(int(last_fit))) > h

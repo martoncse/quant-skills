@@ -17,6 +17,9 @@ and #6), and you need to choose hyperparameters without leaking the future.
   `walk_forward_splits(dates, n_splits, horizon)` (`utils/splits.py`) yield
   `(train_dates, test_dates)`.
 - `cv_score(make_model, X, y, ...) -> list[float]`: per-fold mean daily Spearman IC.
+- `oof_predictions(make_model, X, y, n_splits, horizon, predict) -> Series`: walk-forward
+  out-of-fold predictions (each block predicted by a model fitted on earlier dates only).
+  Use them to check calibration (`quantskills.robustness.calibration_summary`).
 - `fit_lgbm_cv(X, y, params, max_rounds, ...) -> (booster, report)`: rounds chosen
   by early stopping per purged fold (median), then refit on all rows.
 - `shap_importance(booster, X) -> Series`: mean |SHAP| via LightGBM's TreeSHAP.

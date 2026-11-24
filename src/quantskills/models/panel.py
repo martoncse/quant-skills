@@ -13,7 +13,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from quantskills.utils.splits import purged_kfold
+from quantskills.utils.splits import purged_kfold, walk_forward_splits
 
 
 def dropna_xy(X: pd.DataFrame, y: pd.Series) -> tuple[pd.DataFrame, pd.Series]:
@@ -52,3 +52,31 @@ def cv_score(
         pred = pd.Series(predict(model, X[te]), index=X.index[te])
         scores.append(panel_ic(pred, y[te]))
     return scores
+
+
+def oof_predictions(
+    make_model: Callable[[], Any],
+    X: pd.DataFrame,
+    y: pd.Series,
+    n_splits: int = 4,
+    horizon: int = 21,
+    predict: Callable[[Any, pd.DataFrame], np.ndarray] | None = None,
+    min_train_frac: float = 0.4,
+) -> pd.Series:
+    """Walk-forward out-of-fold predictions: each block is predicted by a model trained
+    only on dates that end ``horizon`` days before it (no label overlaps the block).
+
+    Use these, not in-sample predictions, to judge calibration. Rows before the
+    first test block are absent from the result.
+    """
+    predict = predict or (lambda m, x: m.predict(x))
+    dates = X.index.get_level_values("date")
+    n_dates = dates.nunique()
+    parts = []
+    for train_d, test_d in walk_forward_splits(
+        dates, n_splits, horizon, int(n_dates * min_train_frac)
+    ):
+        tr, te = dates.isin(train_d), dates.isin(test_d)
+        model = make_model().fit(X[tr], y[tr])
+        parts.append(pd.Series(predict(model, X[te]), index=X.index[te]))
+    return pd.concat(parts).rename("oof")

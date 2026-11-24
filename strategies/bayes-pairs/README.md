@@ -48,6 +48,22 @@ The planted ratio is constant, so the filter correctly finds little to update.
   and a larger one (1e-4) gave 1.0. We **did not** adopt 1e-6: that would be
   choosing a parameter by its hold-out result. A fresh hold-out is needed to test it.
 
+## Robustness
+Verdict: **AMBER** (`uv run python skills/robustness/scripts/robustness_report.py --strategy bayes-pairs`). Every check runs walk-forward inside the training window except the last row. Method: [docs/robustness.md](../../docs/robustness.md).
+
+| Check | Value | Rule | Status |
+|---|---|---|---|
+| Deflated Sharpe | 0.976 (SR 2.21 vs 0.56, N=10) | ≥ 0.95 green, ≥ 0.5 amber | green |
+| PBO (CSCV) | 0.65, P(loss) 0.01, 9 configs | PBO ≤ 0.25 or P(loss) ≤ 0.1 green | green |
+| Sensitivity (worst / base) | 0.69 kept (worst SR 1.52) | ≥ 0.5 green, ≥ 0.0 amber | green |
+| Price noise 25 bps | 1.03 kept (SR 2.29) | ≥ 0.75 green, ≥ 0.4 amber | green |
+| Trade 1 day late | 0.88 kept (SR 1.95) | ≥ 0.75 green, ≥ 0.4 amber | green |
+| Worst regime Sharpe | 1.39 (up trend) | ≥ 0.0 green, ≥ -1.0 amber | green |
+| Walk-forward / in-sample | 0.77 (SR 2.87 → 2.21) | ≥ 0.5 green, ≥ 0.0 amber | green |
+| Hold-out / in-sample | 0.38 (SR 2.87 → 1.10) | ≥ 0.5 green, ≥ 0.0 amber | amber |
+
+Every training-window check is green, including PBO via P(loss) 0.01. The only amber is the hold-out itself (1.10 vs 2.87 in-sample).
+
 ## Failure modes
 - **`delta` too large:** the filter "explains away" the spread by moving the intercept,
   so z never reaches the band.

@@ -48,6 +48,22 @@ Mean |SHAP| (×1e-3): 12-1 momentum 3.2, 21-day reversal 1.3, 6-1 momentum 1.1,
 - SHAP ranks 12-1 momentum first, which is the effect planted in the data, so the
   explanation matches what the data actually contain.
 
+## Robustness
+Verdict: **RED** (`uv run python skills/robustness/scripts/robustness_report.py --strategy gbm-long-short`). Every check runs walk-forward inside the training window except the last row. Method: [docs/robustness.md](../../docs/robustness.md).
+
+| Check | Value | Rule | Status |
+|---|---|---|---|
+| Deflated Sharpe | 0.381 (SR 0.34 vs 0.57, N=10) | ≥ 0.95 green, ≥ 0.5 amber | red |
+| PBO (CSCV) | 0.58, P(loss) 0.20, 9 configs | PBO ≤ 0.25 or P(loss) ≤ 0.1 green | amber |
+| Sensitivity (worst / base) | — (base SR 0.34 < 0.5) | ≥ 0.5 green, ≥ 0.0 amber | n/a |
+| Price noise 25 bps | — (base SR 0.34 < 0.5) | ≥ 0.75 green, ≥ 0.4 amber | n/a |
+| Trade 1 day late | — (base SR 0.34 < 0.5) | ≥ 0.75 green, ≥ 0.4 amber | n/a |
+| Worst regime Sharpe | -0.18 (down trend) | ≥ 0.0 green, ≥ -1.0 amber | amber |
+| Walk-forward / in-sample | 0.10 (SR 3.47 → 0.34) | ≥ 0.5 green, ≥ 0.0 amber | amber |
+| Hold-out / in-sample | 0.06 (SR 3.47 → 0.21) | ≥ 0.5 green, ≥ 0.0 amber | amber |
+
+The overfitting is visible without the hold-out: walk-forward inside the training window gives 0.34 against 3.47 in-sample, and the DSR is red. The sensitivity surface points to smaller trees (7 leaves scores 1.23 walk-forward). Adopting that would be a new trial, and DSR would have to count it.
+
 ## Failure modes
 - **Overfitting:** flexible models fit noise. Watch the in-sample/hold-out gap and the DSR,
   and count every hyperparameter tried as a trial.
@@ -58,4 +74,4 @@ Mean |SHAP| (×1e-3): 12-1 momentum 3.2, 21-day reversal 1.3, 6-1 momentum 1.1,
 
 ## Next steps
 - Walk-forward retraining; a classification objective; monotone constraints on momentum.
-- Robustness report (PBO across hyperparameter grids) in Phase 4.
+- Smaller trees, as the sensitivity surface suggests (counted as a new trial).

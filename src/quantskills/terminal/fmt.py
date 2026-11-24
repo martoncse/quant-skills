@@ -59,3 +59,16 @@ def heat(value: float, text: str | None = None) -> Text:
     bg = _blend(HEAT_BASE, HEAT_POS if value >= 0 else HEAT_NEG, t)
     fg = "#ffffff" if t > 0.45 else "#c9d1d9"
     return Text(text if text is not None else f"{value:+.2f}", style=f"{fg} on {bg}")
+
+
+STATUS_STYLE = {
+    "green": "bold #3fb950",
+    "amber": "bold #d29922",
+    "red": "bold #f85149",
+    "n/a": MUTED,
+}
+
+
+def status_text(status: str, text: str | None = None) -> Text:
+    """A red / amber / green verdict label."""
+    return Text(text if text is not None else status.upper(), style=STATUS_STYLE.get(status, MUTED))

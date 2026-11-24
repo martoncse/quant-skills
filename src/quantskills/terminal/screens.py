@@ -32,9 +32,20 @@ from quantskills.data import period_window, quote_detail, quote_table, to_wide
 from quantskills.eval import drawdown_series, tear_sheet
 from quantskills.features import sma
 from quantskills.portfolio import RiskView, risk_view
+from quantskills.robustness import RobustnessReport, robustness_report
 from quantskills.strategies import STRATEGIES, Strategy, StrategyRun, get_strategy, run_strategy
 from quantskills.terminal.commands import COMMANDS, parse_value
-from quantskills.terminal.fmt import DOWN, MUTED, UP, heat, num, pct, signed, sparkline
+from quantskills.terminal.fmt import (
+    DOWN,
+    MUTED,
+    UP,
+    heat,
+    num,
+    pct,
+    signed,
+    sparkline,
+    status_text,
+)
 from quantskills.utils import holdout_date
 
 if TYPE_CHECKING:
@@ -493,6 +504,109 @@ class RiskScreen(QSScreen):
             ct.add_row(Text(str(t), style=ACCENT), *(heat(x) for x in row))
 
 
+class RobustScreen(QSScreen):
+    """Robustness report for one strategy, computed in a worker thread (~2-40 s)."""
+
+    def __init__(self, strategy: Strategy, test_fraction: float = 0.3) -> None:
+        super().__init__()
+        self.strategy = strategy
+        self.test_fraction = test_fraction
+
+    def compose_body(self) -> ComposeResult:
+        yield Static(f"ROBUST · {self.strategy.name}", id="robust-title", classes="status")
+        yield Static("Starting…", id="robust-verdict", classes="panel")
+        with Horizontal(id="robust-top"):
+            yield DataTable(id="robust-checks", cursor_type="none")
+            with Vertical(id="robust-side"):
+                yield Static(_label("Sensitivity surface"), id="robust-surface-label")
+                yield DataTable(id="robust-surface", cursor_type="none")
+                yield Static(_label("Perturbations"))
+                yield DataTable(id="robust-perturb", cursor_type="none")
+                yield Static(_label("Regimes (training window)"))
+                yield DataTable(id="robust-regimes", cursor_type="none")
+
+    def on_mount(self) -> None:
+        prices = self.qs.state.prices
+        if prices is None:
+            self.query_one("#robust-verdict", Static).update(Text("No data loaded.", style=DOWN))
+            return
+        self._compute(self.strategy, prices, self.test_fraction)
+
+    def _progress(self, message: str) -> None:
+        self.query_one("#robust-verdict", Static).update(Text(f"Running: {message} …", MUTED))
+
+    @work(thread=True, exclusive=True, group="robust")
+    def _compute(self, strategy: Strategy, prices: pd.DataFrame, test_fraction: float) -> None:
+        def say(msg: str) -> None:
+            self.app.call_from_thread(self._progress, msg)
+
+        try:
+            train_end = holdout_date(prices.index.get_level_values("date"), test_fraction)
+            report = robustness_report(strategy, prices, train_end, progress=say)
+        except Exception as exc:
+            self.app.call_from_thread(self._failed, str(exc))
+            return
+        self.app.call_from_thread(self._show, report)
+
+    def _failed(self, error: str) -> None:
+        self.query_one("#robust-verdict", Static).update(Text(f"Failed: {error}", style=DOWN))
+        self.qs.report_error(f"Robustness failed: {error}")
+
+    def _show(self, r: RobustnessReport) -> None:
+        caption = (
+            f"\n{r.strategy} · train ≤ {r.train_end.date()} · checks scored {r.mode} "
+            "inside the training window · only the last row uses the hold-out"
+        )
+        self.query_one("#robust-title", Static).update(
+            Text.assemble((f"ROBUST · {r.strategy}", "bold " + ACCENT), (caption, MUTED))
+        )
+        self.query_one("#robust-verdict", Static).update(
+            Text.assemble(
+                ("Verdict: ", "bold"),
+                status_text(r.verdict),
+                ("   a triage flag, not proof: green means no red flags in these tests", MUTED),
+            )
+        )
+        ct = self.query_one("#robust-checks", DataTable)
+        ct.add_columns("Check", "Status", "Value", "Rule")
+        for c in r.checks:
+            ct.add_row(c.name, status_text(c.status), Text(c.display), Text(c.rule, MUTED))
+
+        st = self.query_one("#robust-surface", DataTable)
+        if r.surface is None:
+            st.add_column("no grid for this strategy")
+        else:
+            s = r.surface
+            vals = s.to_numpy(dtype=float)
+            lim = float(np.nanmax(np.abs(vals))) if np.isfinite(vals).any() else 1.0
+            self.query_one("#robust-surface-label", Static).update(
+                _label(f"Sensitivity ({r.mode} Sharpe): rows {s.index.name}, cols {s.columns.name}")
+            )
+            st.add_column("")
+            for col in s.columns:
+                st.add_column(f"{col:g}", width=7)
+            for idx, row in s.iterrows():
+                cells = [heat(v / lim if lim else 0.0, _cell(v, "{:.2f}")) for v in row]
+                st.add_row(Text(f"{idx:g}", ACCENT), *cells)
+
+        pt = self.query_one("#robust-perturb", DataTable)
+        pt.add_columns("Test", "Size", "Sharpe")
+        for bps, row in r.noise_summary().iterrows():
+            pt.add_row("price noise", f"{bps:g} bps", _cell(row.sharpe, "{:.2f}"))
+        for row in r.delay.itertuples(index=False):
+            pt.add_row("trade late", f"{row.delay} d", _cell(row.sharpe, "{:.2f}"))
+
+        rt = self.query_one("#robust-regimes", DataTable)
+        rt.add_columns("Regime", "Days", "Sharpe", "Ann. ret")
+        for (_kind, name), row in r.regimes.iterrows():
+            rt.add_row(
+                str(name),
+                f"{row.days:.0f}",
+                signed(_cell(row.sharpe, "{:.2f}"), row.sharpe),
+                _cell(row.ann_return, "{:+.1%}"),
+            )
+
+
 class HelpScreen(QSScreen):
     def compose_body(self) -> ComposeResult:
         yield Static(id="help", classes="panel")
@@ -505,7 +619,7 @@ class HelpScreen(QSScreen):
             # Text(), not str: "[key=value ...]" would otherwise be parsed as Rich markup.
             t.add_row(Text(usage), Text(desc))
         t.add_row("", "")
-        t.add_row("F1 / F2 / F3 / F4", "Help / Watchlist / Strategy lab / Risk")
+        t.add_row("F1 … F5", "Help / Watchlist / Strategy lab / Risk / Robustness")
         t.add_row("Esc", "Back")
         t.add_row("/", "Focus the command bar")
         t.add_row("Ctrl+Q", "Quit")

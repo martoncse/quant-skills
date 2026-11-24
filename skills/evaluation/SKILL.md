@@ -41,6 +41,8 @@ README, PR or write-up.
 - Never present backtests as expected returns; `format_tear_sheet` adds that disclaimer.
 - The Bayesian Sharpe interval assumes i.i.d. normal returns. With fat tails and
   autocorrelation the real uncertainty is wider, so treat it as a lower bound.
+- DSR alone does not test fragility. For PBO, noise / delay / parameter perturbations
+  and walk-forward checks, use the [robustness](../robustness/SKILL.md) skill.
 
 ## References
 - ML4T 3rd ed., ch. 7 (IC, DSR), ch. 16 (overfitting tests)

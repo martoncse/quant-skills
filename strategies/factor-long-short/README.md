@@ -47,6 +47,22 @@ The winner's hold-out Sharpe is -1.0.
   1.5% idiosyncratic noise. With `drift_vol=0.001`, momentum's training IC is
   reliably positive (see `tests/strategies`).
 
+## Robustness
+Verdict: **RED** (`uv run python skills/robustness/scripts/robustness_report.py --strategy factor-long-short`). Every check runs walk-forward inside the training window except the last row. Method: [docs/robustness.md](../../docs/robustness.md).
+
+| Check | Value | Rule | Status |
+|---|---|---|---|
+| Deflated Sharpe | 0.872 (SR 1.34 vs 0.48, N=10) | ≥ 0.95 green, ≥ 0.5 amber | amber |
+| PBO (CSCV) | 0.81, P(loss) 0.11, 9 configs | PBO ≤ 0.25 or P(loss) ≤ 0.1 green | amber |
+| Sensitivity (worst / base) | 0.65 kept (worst SR 0.87) | ≥ 0.5 green, ≥ 0.0 amber | green |
+| Price noise 25 bps | 1.02 kept (SR 1.36) | ≥ 0.75 green, ≥ 0.4 amber | green |
+| Trade 1 day late | 0.93 kept (SR 1.24) | ≥ 0.75 green, ≥ 0.4 amber | green |
+| Worst regime Sharpe | -1.34 (down trend) | ≥ 0.0 green, ≥ -1.0 amber | red |
+| Walk-forward / in-sample | 1.34 (SR 0.99 → 1.34) | ≥ 0.5 green, ≥ 0.0 amber | green |
+| Hold-out / in-sample | 0.10 (SR 0.99 → 0.10) | ≥ 0.5 green, ≥ 0.0 amber | amber |
+
+Perturbations are harmless and the walk-forward Sharpe (1.34) is even above in-sample, but two checks warn: PBO is high (the 3x3 grid is a plateau of similar configs) and the strategy loses badly in down-trending markets (-1.34). The hold-out (0.10) agrees with the noise-only control above: most of the in-sample Sharpe was not the planted signal.
+
 ## Failure modes
 - **Momentum crashes:** sharp reversals after market drawdowns hit the short leg.
 - **Low-vol ≈ short beta.** In an up-trending market low-vol gets a negative
@@ -59,4 +75,3 @@ The winner's hold-out Sharpe is -1.0.
 ## Next steps
 - Run on cached real data (`--data cache`) with a survivorship-aware universe.
 - Walk-forward re-fitting instead of a single train/test split.
-- Robustness report (PBO, perturbation tests) in Phase 4.

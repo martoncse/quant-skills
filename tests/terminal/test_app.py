@@ -14,6 +14,7 @@ from quantskills.terminal.screens import (
     QuoteScreen,
     ResultsScreen,
     RiskScreen,
+    RobustScreen,
     StrategyLabScreen,
     WatchlistScreen,
 )
@@ -212,5 +213,51 @@ def test_every_strategy_runs_from_the_terminal(name, rich_prices):
             assert app.state.last_error == ""
             assert isinstance(app.screen, ResultsScreen), name
             assert app.state.last_run.strategy.name == name
+
+    run(flow())
+
+
+def test_robust_screen_shows_verdict_checks_and_surface(small_prices):
+    async def flow():
+        app = QSTerminal(prices=small_prices)
+        async with app.run_test(size=SIZE) as pilot:
+            await _type(pilot, "ROBUST factor-long-short")
+            assert isinstance(app.screen, RobustScreen)
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+            screen = app.screen
+            checks = screen.query_one("#robust-checks", DataTable)
+            names = [str(checks.get_row_at(i)[0]) for i in range(checks.row_count)]
+            assert names[0] == "Deflated Sharpe" and names[-1] == "Hold-out / in-sample"
+            assert "PBO (CSCV)" in names
+            statuses = {str(checks.get_row_at(i)[1]) for i in range(checks.row_count)}
+            assert statuses <= {"GREEN", "AMBER", "RED", "N/A"}
+            verdict = str(screen.query_one("#robust-verdict").render())
+            assert "Verdict" in verdict
+            surface = screen.query_one("#robust-surface", DataTable)
+            assert surface.row_count == 3 and len(surface.columns) == 4
+            assert screen.query_one("#robust-perturb", DataTable).row_count == 4 + 4
+            assert screen.query_one("#robust-regimes", DataTable).row_count >= 2
+
+    run(flow())
+
+
+def test_robust_defaults_to_last_run_and_validates(small_prices):
+    async def flow():
+        app = QSTerminal(prices=small_prices)
+        async with app.run_test(size=SIZE) as pilot:
+            await _type(pilot, "BT factor-long-short quantile=0.1")
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+            await pilot.press("f5")
+            await pilot.pause()
+            assert isinstance(app.screen, RobustScreen)
+            assert app.screen.strategy.params["quantile"] == 0.1
+            await app.workers.wait_for_complete()
+            await pilot.press("escape")
+            await _type(pilot, "ROBUST nope")
+            assert "Unknown strategy" in app.state.last_error
+            await _type(pilot, "ROBUST factor-long-short quantile=0.9")
+            assert "quantile" in app.state.last_error
 
     run(flow())

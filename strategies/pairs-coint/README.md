@@ -48,6 +48,22 @@ Default, hold-out: 90% Bayesian credible interval for the Sharpe is [1.20, 3.90]
 - Low volatility (2%) means a high Sharpe on a small return. Real pairs books are
   levered, and leverage amplifies the failure modes below.
 
+## Robustness
+Verdict: **AMBER** (`uv run python skills/robustness/scripts/robustness_report.py --strategy pairs-coint`). Every check runs walk-forward inside the training window except the last row. Method: [docs/robustness.md](../../docs/robustness.md).
+
+| Check | Value | Rule | Status |
+|---|---|---|---|
+| Deflated Sharpe | 0.948 (SR 2.04 vs 0.66, N=10) | ≥ 0.95 green, ≥ 0.5 amber | amber |
+| PBO (CSCV) | 0.69, P(loss) 0.15, 9 configs | PBO ≤ 0.25 or P(loss) ≤ 0.1 green | amber |
+| Sensitivity (worst / base) | 0.62 kept (worst SR 1.27) | ≥ 0.5 green, ≥ 0.0 amber | green |
+| Price noise 25 bps | 0.88 kept (SR 1.80) | ≥ 0.75 green, ≥ 0.4 amber | green |
+| Trade 1 day late | 0.93 kept (SR 1.89) | ≥ 0.75 green, ≥ 0.4 amber | green |
+| Worst regime Sharpe | 1.37 (up trend) | ≥ 0.0 green, ≥ -1.0 amber | green |
+| Walk-forward / in-sample | 1.09 (SR 1.87 → 2.04) | ≥ 0.5 green, ≥ 0.0 amber | green |
+| Hold-out / in-sample | 1.37 (SR 1.87 → 2.56) | ≥ 0.5 green, ≥ 0.0 amber | green |
+
+Survives every perturbation; amber only because the DSR is just below 0.95 and PBO is high on a plateau of profitable configs (P(loss) 0.15). Delay costs more after two days, since spreads revert quickly.
+
 ## Failure modes
 - **Broken relationships:** mergers, index changes and regime shifts end
   cointegration without warning. The stop at |z| > 4 limits, but doesn't prevent, the damage.
@@ -58,4 +74,3 @@ Default, hold-out: 90% Bayesian credible interval for the Sharpe is [1.20, 3.90]
 
 ## Next steps
 - Run on real ETF pairs (e.g. sector ETFs) from the cache.
-- Robustness: perturb entry and exit bands and the z window (Phase 4).

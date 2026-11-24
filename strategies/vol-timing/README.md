@@ -44,6 +44,22 @@ looks good on its hold-out**. The comparison against buy-and-hold is what matter
   and acting on it multiplies turnover by 8.
 - On the main synthetic panel (constant vol), GARCH correctly estimates α ≈ 0: no clustering, nothing to time.
 
+## Robustness
+Verdict: **AMBER** (`uv run python skills/robustness/scripts/robustness_report.py --strategy vol-timing`). Every check runs walk-forward inside the training window except the last row. Method: [docs/robustness.md](../../docs/robustness.md).
+
+| Check | Value | Rule | Status |
+|---|---|---|---|
+| Deflated Sharpe | 0.866 (SR 0.90 vs 0.06, N=10) | ≥ 0.95 green, ≥ 0.5 amber | amber |
+| PBO (CSCV) | 0.60, P(loss) 0.07, 9 configs | PBO ≤ 0.25 or P(loss) ≤ 0.1 green | green |
+| Sensitivity (worst / base) | 0.92 kept (worst SR 0.82) | ≥ 0.5 green, ≥ 0.0 amber | green |
+| Price noise 25 bps | 0.99 kept (SR 0.90) | ≥ 0.75 green, ≥ 0.4 amber | green |
+| Trade 1 day late | 0.99 kept (SR 0.89) | ≥ 0.75 green, ≥ 0.4 amber | green |
+| Worst regime Sharpe | 0.59 (up trend) | ≥ 0.0 green, ≥ -1.0 amber | green |
+| Walk-forward / in-sample | 1.47 (SR 0.61 → 0.90) | ≥ 0.5 green, ≥ 0.0 amber | green |
+| Hold-out / in-sample | 4.70 (SR 0.61 → 2.87) | ≥ 0.5 green, ≥ 0.0 amber | green |
+
+The parameters barely matter (walk-forward Sharpe 0.82-0.90 across the grid), as expected for a risk-control overlay whose return comes from the index. Read it against buy-and-hold, as above.
+
 ## Failure modes
 - **Volatility jumps:** GARCH reacts after a shock, not before. A crash
   day is taken at full size.

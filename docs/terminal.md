@@ -29,10 +29,10 @@ Demo data: 30 synthetic stocks, 3 cointegrated pairs (`PAIRkA/B`) and a GARCH in
 | `RESULTS` | Re-open the last backtest's results |
 | `DATA DEMO\|CACHE` | Switch data source |
 | `RISK [hrp\|min_var\|inverse_vol\|equal\|eigen] [lookback]` | Weights, VaR/CVaR and a correlation heatmap (default `hrp 252`) |
-| `ROBUST` | Placeholder for Phase 4 |
+| `ROBUST [strategy] [key=value ...]` | Robustness report: DSR, PBO, noise / delay / sensitivity, regimes and a red/amber/green verdict. With no strategy, uses the last one you backtested |
 | `HELP`, `QUIT` | |
 
-Keys: `F1` help, `F2` watchlist, `F3` lab, `F4` risk, `ctrl+r` run (in the lab), `Esc` back,
+Keys: `F1` help, `F2` watchlist, `F3` lab, `F4` risk, `F5` robustness, `ctrl+r` run (in the lab), `Esc` back,
 `/` focus the command bar, `ctrl+q` quit.
 
 ## Screens
@@ -53,6 +53,18 @@ Keys: `F1` help, `F2` watchlist, `F3` lab, `F4` risk, `ctrl+r` run (in the lab),
     (blue positive, red negative)
 
   These are in-window numbers, a description and not a forecast.
+- **Robustness**: `robustness_report()` from `quantskills.robustness`, run in a worker
+  thread (2-40 s; the status line shows progress):
+  - a verdict banner (worst of the graded checks) and the checks table: deflated Sharpe,
+    PBO with P(OOS loss), sensitivity, 25 bps price noise, a 1-day delay, worst regime,
+    walk-forward / in-sample and hold-out / in-sample
+  - the two-parameter sensitivity surface as a heatmap, noise and delay Sharpes, and
+    the regime table
+
+  Every check except the last row runs walk-forward inside the training window.
+  See [robustness.md](robustness.md).
+
+![robustness screen](img/terminal-robust.png)
 
 ## Layout
 
@@ -70,7 +82,8 @@ src/quantskills/terminal/
 `tests/terminal/test_app.py` drives each screen with Textual's `App.run_test()` pilot:
 empty-cache message, watchlist → quote → back, chart and help, the lab running a
 backtest in a worker, `BT` with good and bad params, invalid lab input, the risk
-screen (weights, metrics, heatmap, bad methods and windows), and a `BT` run of
+screen (weights, metrics, heatmap, bad methods and windows), the robustness
+screen (checks, surface, F5 reusing the last backtest, bad input), and a `BT` run of
 **every** registered strategy.
 `tests/terminal/test_commands.py` covers the parser.
 
