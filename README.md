@@ -28,6 +28,28 @@ uv run qs-terminal --demo                                      # the terminal, o
 uv run qs-terminal --demo --theme amber                        # ... in amber (or light)
 ```
 
+## Install without cloning
+
+Each version tag (`v0.1.0`, …) publishes a wheel to
+[Releases](https://github.com/martoncse/quant-skills/releases) and a Docker image to the
+GitHub Container Registry. Both are private while the repo is, so authenticate first.
+
+```bash
+# pip: the library, the CLI scripts' logic and `qs-terminal`
+gh release download v0.1.0 -R martoncse/quant-skills -p "*.whl"
+pip install quantskills-0.1.0-py3-none-any.whl            # add [dl] for strategies #9-#12
+qs-terminal --demo
+
+# Docker: the terminal, nothing to install (needs -it for the TTY)
+gh auth refresh -s read:packages          # once: let your gh token pull packages
+gh auth token | docker login ghcr.io -u <your-github-user> --password-stdin
+docker run -it --rm ghcr.io/martoncse/quant-skills:0.1.0              # demo data
+docker run -it --rm -v "$PWD/data:/work/data" ghcr.io/martoncse/quant-skills:0.1.0 --cache-dir data  # your cache
+```
+
+The image has the core install only (build with `--build-arg EXTRAS=dl` for PyTorch).
+The skill folders (notebooks, scripts) are in the repo, not the wheel.
+
 ## QS Terminal
 
 A keyboard-driven research terminal (Textual): watchlist, quotes, charts,
