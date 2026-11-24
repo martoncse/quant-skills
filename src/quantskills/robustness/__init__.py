@@ -25,7 +25,14 @@ from quantskills.robustness.perturb import (
     noise_test,
     sensitivity_surface,
 )
-from quantskills.robustness.plots import plot_decay, plot_pbo, plot_reliability, plot_surface
+from quantskills.robustness.plots import (
+    plot_decay,
+    plot_generators,
+    plot_pbo,
+    plot_reliability,
+    plot_stress,
+    plot_surface,
+)
 from quantskills.robustness.regime import (
     REGIME_KINDS,
     market_returns,
@@ -65,8 +72,10 @@ __all__ = [
     "overall",
     "pbo_cscv",
     "plot_decay",
+    "plot_generators",
     "plot_pbo",
     "plot_reliability",
+    "plot_stress",
     "plot_surface",
     "regime_labels",
     "regime_report",

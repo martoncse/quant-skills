@@ -10,6 +10,7 @@ from quantskills.strategies.factor_long_short import FactorLongShort
 from quantskills.strategies.gbm_long_short import GBMLongShort
 from quantskills.strategies.linear_forecast import LinearForecast
 from quantskills.strategies.pairs_coint import PairsCointegration
+from quantskills.strategies.rl_agent import RLAgent
 from quantskills.strategies.runner import StrategyRun, run_strategy, sweep_params
 from quantskills.strategies.text_sentiment import TextSentiment
 from quantskills.strategies.unsupervised_risk import UnsupervisedRisk
@@ -17,7 +18,9 @@ from quantskills.strategies.vol_timing import VolatilityTiming
 
 # Book order: #1 factor, #2 linear, #3 pairs, #4 vol timing, #5 Bayesian pairs,
 # #6 gradient boosting, #7 unsupervised risk, #8 text sentiment, #9 deep learning,
-# #10 conditional autoencoder. #9 and #10 need the optional `dl` extra (PyTorch),
+# #10 conditional autoencoder, #12 deep RL (#11 is a stress-testing tool, not a
+# trading rule: see quantskills.robustness.stress). #9, #10 and #12 need the optional
+# `dl` extra (PyTorch),
 # imported only when they are fitted, so the registry always lists them.
 STRATEGIES: dict[str, type[Strategy]] = {
     cls.name: cls
@@ -32,6 +35,7 @@ STRATEGIES: dict[str, type[Strategy]] = {
         TextSentiment,
         DLForecast,
         ConditionalAutoencoder,
+        RLAgent,
     )
 }
 
@@ -52,6 +56,7 @@ __all__ = [
     "GBMLongShort",
     "LinearForecast",
     "PairsCointegration",
+    "RLAgent",
     "Strategy",
     "StrategyRun",
     "TextSentiment",

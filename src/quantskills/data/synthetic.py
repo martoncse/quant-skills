@@ -130,3 +130,72 @@ def _pair_closes(
         out[:, 2 * k] = np.exp(log_a)
         out[:, 2 * k + 1] = np.exp(log_b)
     return out
+
+
+def stylized_prices(
+    n_assets: int = 5,
+    n_days: int = 1260,
+    seed: int = 0,
+    start: str = "2015-01-02",
+    alpha: float = 0.08,
+    beta: float = 0.90,
+    dof: float = 5.0,
+) -> pd.DataFrame:
+    """A small panel with the textbook stylized facts, for testing generators.
+
+    A market factor with GARCH(1,1) variance (volatility clustering) and Student-t
+    shocks (fat tails); each asset = beta_i x market + Student-t idiosyncratic noise
+    scaled by the same volatility state. No planted alpha.
+    """
+    rng = np.random.default_rng([seed, 3])
+    omega = 0.01**2 * (1.0 - alpha - beta)
+    t_scale = np.sqrt((dof - 2.0) / dof)
+    var = np.empty(n_days)
+    m = np.empty(n_days)
+    v = omega / (1.0 - alpha - beta)
+    eps_prev = 0.0
+    for t in range(n_days):
+        v = omega + alpha * eps_prev**2 + beta * v
+        var[t] = v
+        eps_prev = np.sqrt(v) * rng.standard_t(dof) * t_scale
+        m[t] = eps_prev
+    betas = rng.uniform(0.7, 1.3, n_assets)
+    vol_state = np.sqrt(var / var.mean())[:, None]
+    idio = 0.008 * vol_state * rng.standard_t(dof, (n_days, n_assets)) * t_scale
+    r = 0.0002 + m[:, None] * betas + idio
+    close = 100.0 * np.cumprod(1.0 + r, axis=0)
+    dates = pd.bdate_range(start, periods=n_days, name="date")
+    tickers = [f"STY{i}" for i in range(n_assets)]
+    fields = _ohlcv(close, rng)
+    idx = pd.MultiIndex.from_product([dates, tickers], names=["date", "ticker"])
+    return pd.DataFrame({k: v.reshape(-1) for k, v in fields.items()}, index=idx)
+
+
+def trend_regime_prices(
+    n_days: int = 1260,
+    seed: int = 0,
+    drift: float = 0.003,
+    switch: float = 0.01,
+    vol: float = 0.01,
+    ticker: str = "TRND",
+    start: str = "2015-01-02",
+) -> tuple[pd.DataFrame, pd.Series]:
+    """One asset whose drift flips between +drift and -drift (each day w.p. ``switch``).
+
+    A positive control for trend-following learners (strategy #12): following the
+    regime pays, and a 20-day momentum rule catches most of it. Returns the long OHLCV
+    panel and the true regime (+1 / -1) per day, for diagnostics only.
+    """
+    rng = np.random.default_rng([seed, 4])
+    state = np.empty(n_days)
+    s = 1.0
+    for t in range(n_days):
+        if rng.uniform() < switch:
+            s = -s
+        state[t] = s
+    close = 100.0 * np.cumprod(1.0 + drift * state + rng.normal(0.0, vol, n_days))
+    fields = _ohlcv(close[:, None], rng)
+    dates = pd.bdate_range(start, periods=n_days, name="date")
+    idx = pd.MultiIndex.from_product([dates, [ticker]], names=["date", "ticker"])
+    panel = pd.DataFrame({k: v.reshape(-1) for k, v in fields.items()}, index=idx)
+    return panel, pd.Series(state, index=dates, name="regime")

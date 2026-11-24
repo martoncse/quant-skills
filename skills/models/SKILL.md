@@ -29,6 +29,12 @@ without leaking the future.
 - Neural nets (`models/nn.py`, needs `uv sync --extra dl`): `make_sequence_net(arch)`
   for `mlp` / `cnn` / `lstm`, `train_early_stopping(model, step, validate)`,
   `require_torch()` (clear message when PyTorch is missing), `torch_available()`.
+- Reinforcement learning (`models/rl.py`, dl extra): `TradingCore` / `make_env` (gymnasium
+  env: short / flat / long, costs in the reward, decisions every `hold_days`),
+  `train_dqn` (Double DQN, checkpoint chosen on a later validation slice),
+  `trend_state_features`, `greedy_positions`.
+- Generative (`models/timegan.py`, dl extra): `TimeGAN(TimeGANConfig).fit(windows)`,
+  `.sample(n)`, `make_windows(returns, seq_len)`. Used by `robustness.stress` (#11).
 
 ## Steps
 1. Build `X` and `y` from the **training window only**: `dropna_xy(feature_panel(c), label_panel(c, 21))`.
@@ -51,6 +57,11 @@ without leaking the future.
 - **Neural nets:** validate on a *later* slice with a label-horizon gap, never a random
   split. Fix the seed and thread count. On small daily panels, expect early stopping to
   halt after a few epochs; that's the model correctly finding little.
+- **RL memorises.** With daily decisions and raw returns as state, the agent scored 7.8
+  in-sample and -2.3 on the hold-out at 240x turnover. A compact state and weekly decisions
+  help; always compare with buy-and-hold and a one-line rule.
+- **GANs on fat-tailed returns:** min-max scaling collapses ordinary days to a sliver;
+  standardise and squash instead (`TimeGANConfig.scaling="tanh"`).
 - **Text:** strip tickers before vectorising, or the model learns which stocks rose.
   Fit labels from the training window only (`news_labels` returns NaN past its end).
 
@@ -60,5 +71,7 @@ without leaking the future.
 - Lundberg & Lee (2017), SHAP; Ke et al. (2017), LightGBM
 - ML4T 3rd ed., ch. 10 (text), ch. 13 (deep learning), ch. 14 (conditional autoencoders);
   Gu, Kelly & Xiu (2021), "Autoencoder Asset Pricing Models"
+- ML4T 3rd ed., ch. 5 (synthetic data, TimeGAN), ch. 21 (reinforcement learning);
+  Yoon et al. (2019) TimeGAN; Mnih et al. (2015) DQN; van Hasselt et al. (2016) Double DQN
 - Demos: `demo.ipynb` (CV, LightGBM, text; core install) and `demo_dl.ipynb`
   (#9 and #10; needs the `dl` extra, so CI does not run it)

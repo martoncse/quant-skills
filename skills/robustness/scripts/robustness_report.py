@@ -67,6 +67,7 @@ def main() -> None:
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--mode", choices=["walk-forward", "in-sample"], default="walk-forward")
     p.add_argument("--n-trials", type=int, default=1, help="configs tried before this report")
+    p.add_argument("--noise-seeds", type=int, default=2, help="seeds per noise level")
     p.add_argument("--param", action="append", default=[], metavar="KEY=VALUE")
     p.add_argument("--figures", action="store_true", help=f"save PNGs under {FIG}")
     a = p.parse_args()
@@ -90,6 +91,7 @@ def main() -> None:
             train_end,
             mode=a.mode,
             n_trials=a.n_trials,
+            noise_seeds=tuple(range(a.noise_seeds)),
             progress=lambda m, n=name: print(f"  [{n}] {m}", flush=True),
         )
         reports[name] = r

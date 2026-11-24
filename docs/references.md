@@ -25,7 +25,9 @@ Skills map: `data-loading` → ch. 2; `features-alpha` → ch. 7–8; `models` �
 
 Code for strategies #1–#10: `src/quantskills/strategies/` (`factor_long_short`, `linear_forecast`,
 `pairs_coint`, `vol_timing`, `bayes_pairs`, `gbm_long_short`, `unsupervised_risk`,
-`text_sentiment`, `dl_forecast`, `cond_autoencoder`).
+`text_sentiment`, `dl_forecast`, `cond_autoencoder`, `rl_agent`). #11 is not a trading rule:
+its generators and stress test live in `src/quantskills/robustness/stress.py` and
+`models/timegan.py`.
 Strategy #5 uses an exact conjugate posterior for the Bayesian Sharpe instead of PyMC
 (same answer for the normal model; PyMC stays optional for richer models).
 
@@ -48,6 +50,9 @@ Strategy #5 uses an exact conjugate posterior for the Bayesian Sharpe instead of
 - Kalman, R. (1960). A New Approach to Linear Filtering and Prediction Problems. (#5)
 - Ke, G. et al. (2017). LightGBM. *NeurIPS*; Lundberg, S. & Lee, S.-I. (2017). A Unified Approach to Interpreting Model Predictions (SHAP). (#6)
 - Markowitz, H. (1952). Portfolio Selection. *J. of Finance*; Ledoit, O. & Wolf, M. (2004). A Well-Conditioned Estimator for Large-Dimensional Covariance Matrices. (portfolio-risk)
+- Yoon, J., Jarrett, D. & van der Schaar, M. (2019). Time-series Generative Adversarial Networks. *NeurIPS*. (#11)
+- Politis, D. & Romano, J. (1994). The Stationary Bootstrap. *JASA*. (#11)
+- Mnih, V. et al. (2015). Human-level Control through Deep Reinforcement Learning. *Nature*; van Hasselt, H., Guez, A. & Silver, D. (2016). Deep Reinforcement Learning with Double Q-learning. *AAAI*. (#12)
 - Gu, S., Kelly, B. & Xiu, D. (2021). Autoencoder Asset Pricing Models. *J. of Econometrics*. (#10)
 - Tetlock, P. (2007). Giving Content to Investor Sentiment. *J. of Finance*; Loughran, T. & McDonald, B. (2011). When Is a Liability Not a Liability? *J. of Finance*. (#8: news tone; our lexicon is our own, not theirs)
 - Avellaneda, M. & Lee, J.-H. (2010). Statistical Arbitrage in the US Equities Market. *Quantitative Finance*. (eigenportfolios, #7)
@@ -64,7 +69,8 @@ Strategy #5 uses an exact conjugate posterior for the Bayesian Sharpe instead of
 | statsmodels (+ patsy) | Engle-Granger, Johansen | BSD-3 (patsy BSD-2) |
 | arch | GARCH(1,1) | NCSA (permissive, BSD-like) |
 | lightgbm | gradient boosting, TreeSHAP | MIT |
-| torch (optional `dl` extra, CPU wheels) | #9 and #10 networks | BSD-3 |
+| torch (optional `dl` extra, CPU wheels) | #9, #10, #12 networks; TimeGAN (#11) | BSD-3 |
+| gymnasium (optional `dl` extra) | #12 trading environment API | MIT |
 | pytest, ruff, mypy, nbconvert | dev | MIT / MIT / MIT / BSD-3 |
 
 Not installed (deliberately): PyPortfolioOpt (MIT; pulls in cvxpy, so mean-variance

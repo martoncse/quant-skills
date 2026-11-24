@@ -66,6 +66,7 @@ def test_registry_has_book_order():
         "text-sentiment",
         "dl-forecast",
         "cond-autoencoder",
+        "rl-dqn",
     ]
     for cls in STRATEGIES.values():
         assert (cls.__doc__ or "").strip(), f"{cls.name} needs a one-line docstring for the lab"

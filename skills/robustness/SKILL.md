@@ -27,6 +27,10 @@ Does it only work in one kind of market (regimes)? Are its probabilities honest
   - `attack_news(news, kind, rate)` for `kind` in `ATTACKS` (paraphrase, synonyms, typos,
     pump) and `text_attack_test(cls, params, train)`: Sharpe with clean vs attacked news.
     The report adds an "Adversarial text" check for strategies with `uses_news = True`.
+  - Synthetic histories (`robustness.stress`, #11): `synthetic_paths(returns, method, n)` for
+    `gaussian`, `bootstrap` (stationary block bootstrap of whole days), `timegan` (dl extra);
+    `fidelity_report` (stylized facts, discriminative score, train-on-synthetic-test-on-real);
+    `stress_test(strategy, train_prices, method, n_paths)` + `stress_summary`.
   - `brier_score`, `log_loss`, `reliability_table`, `expected_calibration_error`,
     `brier_decomposition`, `calibration_summary`; out-of-fold probabilities from
     `quantskills.models.oof_predictions`
@@ -60,6 +64,9 @@ Does it only work in one kind of market (regimes)? Are its probabilities honest
   "profit" from the noise itself.
 - Calibration matters only when probabilities are used as probabilities (sizing,
   confidence). A ranking strategy can be useful and badly calibrated.
+- **Know what a generator keeps.** The block bootstrap keeps tails, same-day correlation
+  and each stock's average return; it breaks price levels (so cointegration) and anything
+  slower than its blocks. A strategy that beats most bootstrap paths relies on what was broken.
 - **Adversarial text** attacks the *live* feed only: the model is fitted on clean
   headlines from the first 60% of the training window and scored on the rest. Paraphrase,
   synonyms and typos keep the meaning a human would read; `pump` adds fake upbeat headlines.

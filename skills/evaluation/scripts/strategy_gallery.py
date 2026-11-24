@@ -37,7 +37,8 @@ def main() -> None:
         "| Hold-out max DD | Turnover/yr | Hold-out DSR (N=1) |"
     )
     print("|---|---|---|---|---|---|---|---|")
-    for i, (name, cls) in enumerate(STRATEGIES.items(), start=1):
+    for k, (name, cls) in enumerate(STRATEGIES.items(), start=1):
+        i = 12 if name == "rl-dqn" else k  # book numbering: #11 is a tool, not a strategy
         run = run_strategy(cls(), prices, train_end)
         is_, oos = tear_sheet(run.in_sample), tear_sheet(run.out_of_sample)
         b = bayesian_sharpe(run.out_of_sample.trim_warmup().returns, seed=a.seed)

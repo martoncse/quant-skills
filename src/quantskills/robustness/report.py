@@ -59,6 +59,7 @@ SENSITIVITY_AXES: dict[str, dict[str, tuple[Any, ...]]] = {
     "text-sentiment": {"window_days": (3, 5, 10), "quantile": (0.2, 0.25, 0.33)},
     "dl-forecast": {"hidden": (8, 16, 32), "dropout": (0.0, 0.1, 0.3)},
     "cond-autoencoder": {"n_factors": (1, 3, 5), "hidden": (8, 16, 32)},
+    "rl-dqn": {"hold_days": (1, 5, 10), "gamma": (0.9,)},  # small: each fit trains an agent
 }
 
 

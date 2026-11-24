@@ -134,3 +134,57 @@ def plot_reliability(
     fig.tight_layout()
     _save(fig, path)
     return fig
+
+
+def plot_generators(
+    real: pd.DataFrame, paths: Mapping[str, pd.DataFrame], path: str | Path | None = None
+):
+    """Return histogram (log scale, fat tails) and |r| autocorrelation (vol clustering)."""
+    plt = _setup(path)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
+    series = {"real": real, **paths}
+    lags = np.arange(1, 21)
+    for label, df in series.items():
+        x = df.to_numpy().ravel()
+        x = x[np.isfinite(x)]
+        style = {"color": "black", "lw": 2} if label == "real" else {"alpha": 0.8}
+        ax1.hist(x, bins=80, histtype="step", density=True, label=label, **style)
+        a = np.abs(df.dropna().to_numpy())
+        acf = [
+            np.nanmean([np.corrcoef(a[:-k, j], a[k:, j])[0, 1] for j in range(a.shape[1])])
+            for k in lags
+        ]
+        ax2.plot(lags, acf, marker=".", label=label, **style)
+    ax1.set_yscale("log")
+    ax1.set_xlabel("daily return")
+    ax1.set_title("Return distribution (log scale: tails)")
+    ax2.axhline(0, color="#444", lw=0.8)
+    ax2.set_xlabel("lag (days)")
+    ax2.set_title("Autocorrelation of |return| (volatility clustering)")
+    for ax in (ax1, ax2):
+        ax.legend(frameon=False, fontsize=8)
+        ax.grid(alpha=0.3)
+    fig.tight_layout()
+    _save(fig, path)
+    return fig
+
+
+def plot_stress(
+    tables: Mapping[str, pd.DataFrame], path: str | Path | None = None, col="is_sharpe"
+):
+    """One panel per strategy: synthetic Sharpe histogram with the real value marked."""
+    plt = _setup(path)
+    n = len(tables)
+    fig, axes = plt.subplots(1, n, figsize=(3.6 * n, 3.2), squeeze=False)
+    for ax, (label, t) in zip(axes[0], tables.items(), strict=True):
+        syn = t.loc[t["path"] >= 0, col]
+        real = float(t.loc[t["path"] == -1, col].iloc[0])
+        ax.hist(syn, bins=15, color="#9aa5b1")
+        ax.axvline(real, color="#d1242f", lw=2, label=f"real {real:.2f}")
+        pct = (syn < real).mean()
+        ax.set_title(f"{label}\nreal beats {pct:.0%} of paths", fontsize=9)
+        ax.set_xlabel(col.replace("_", " "))
+        ax.legend(frameon=False, fontsize=8)
+    fig.tight_layout()
+    _save(fig, path)
+    return fig

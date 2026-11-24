@@ -208,9 +208,12 @@ def test_every_strategy_runs_from_the_terminal(name, rich_prices):
         "unsupervised-risk": " lookback=126",
         "dl-forecast": " max_epochs=2 lookback=63",
         "cond-autoencoder": " max_epochs=20",
+        "rl-dqn": " train_steps=400 eval_every=200",
     }
-    if name in {"dl-forecast", "cond-autoencoder"}:
+    if name in {"dl-forecast", "cond-autoencoder", "rl-dqn"}:
         pytest.importorskip("torch")
+    if name == "rl-dqn":
+        pytest.importorskip("gymnasium")
 
     async def flow():
         app = QSTerminal(prices=rich_prices)

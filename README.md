@@ -3,7 +3,8 @@
 A library of tested **Claude skills** for quantitative finance and ML for trading.
 Each skill is a self-contained unit covering one stage of the research pipeline:
 data, features, models, backtesting, portfolio risk, evaluation and robustness.
-Ten strategy families from *Machine Learning for Trading* are reimplemented
+All twelve strategy families from *Machine Learning for Trading* (eleven trading strategies
+plus a synthetic-data stress-testing tool) are reimplemented
 from scratch and run through the same cost-aware backtester and tear sheet, then
 through a robustness report that tries to break them.
 
@@ -14,11 +15,11 @@ through a robustness report that tries to break them.
 
 ```bash
 uv sync                                                        # core (no PyTorch)
-uv sync --extra dl                                             # + PyTorch (CPU) for strategies #9, #10
+uv sync --extra dl                                             # + PyTorch (CPU) and gymnasium for #9-#12
 uv run pytest                                                  # offline, about a minute
 uv run python skills/backtesting/scripts/run_backtest.py       # strategy #1 on synthetic data
 uv run python skills/evaluation/scripts/select_and_deflate.py  # sweep → deflated Sharpe → hold-out
-uv run python skills/evaluation/scripts/strategy_gallery.py    # all 10 strategies, one table
+uv run python skills/evaluation/scripts/strategy_gallery.py    # all 11 strategies, one table
 uv run python skills/robustness/scripts/robustness_report.py --strategy pairs-coint  # DSR, PBO, perturbations
 uv run python skills/data-loading/scripts/fetch.py --tickers SPY QQQ IWM  # real data into data/
 uv run qs-terminal --demo                                      # the terminal, on synthetic data
@@ -27,7 +28,7 @@ uv run qs-terminal --demo                                      # the terminal, o
 ## QS Terminal
 
 A keyboard-driven research terminal (Textual): watchlist, quotes, charts,
-a strategy lab that backtests any of the ten strategies in a background worker,
+a strategy lab that backtests any of the eleven strategies in a background worker,
 a results view with in-sample vs hold-out metrics, equity, drawdown and the trade
 list, a risk screen (`RISK hrp`, F4) with weights, VaR/CVaR and a clustered
 correlation heatmap, and a robustness screen (`ROBUST gbm-long-short`, F5) with a
@@ -41,7 +42,7 @@ red/amber/green verdict. Type `HELP` inside it, or see [docs/terminal.md](docs/t
 ## What's different
 - **Costs on by default** (5 + 5 bps). Weights drift between rebalances and turnover is charged on the drifted book.
 - **Look-ahead tests:** `assert_no_lookahead` scrambles the future and checks
-  that past feature values don't move. Every factor and all ten strategies are tested with it (news included, for #8),
+  that past feature values don't move. Every factor and all eleven strategies are tested with it (news included, for #8),
   and a second test checks that `fit` gives the same answer when the hold-out is scrambled.
 - **Purged, embargoed CV** for every ML model. The models demo shows shuffled K-fold
   "finding" an IC of 0.29 on pure noise.
@@ -72,8 +73,13 @@ Synthetic-plus panel = 30 one-factor stocks + 3 planted cointegrated pairs + a G
 | 8 | News sentiment (TF-IDF, synthetic headlines) | 10 | 2.11 | 1.10 | -0.28 ‡ | [-1.63, 1.05] | 🔴 red | [README](strategies/text-sentiment/README.md) |
 | 9 | Deep-learning forecast (1-D CNN) `dl` | 13 | 0.58 | 0.73 | -0.24 | [-1.60, 1.08] | 🔴 red | [README](strategies/dl-forecast/README.md) |
 | 10 | Conditional autoencoder `dl` | 14 | 1.19 | -0.73 | -0.99 | [-2.34, 0.34] | 🔴 red | [README](strategies/cond-autoencoder/README.md) |
+| 12 | Deep RL agent (Double DQN, weekly decisions) `dl` | 21 | 1.30 | 0.39 | -0.37 § | [-1.72, 0.96] | 🔴 red | [README](strategies/rl-dqn/README.md) |
 
 \* Buy-and-hold of the same index scores 2.83: the vol target controls risk (10.3% vs 16.6% vol), not return.
+
+§ Buy-and-hold of the same index (`IDX`) scores 2.83. On a positive-control asset with planted trend regimes the agent earns 1.82 out of sample, but a one-line 20-day momentum rule earns 4.2.
+
+**#11 is a tool, not a strategy:** synthetic histories for stress tests ([write-up](strategies/synthetic-data/README.md)). A block bootstrap passes for real data (a classifier scores 0.01 from perfect confusion); our TimeGAN does not at laptop scale (0.50). Rerunning strategies on 20 bootstrapped histories shows pairs depends on price *levels*: it beats 100% of paths, where factor strategies sit mid-distribution.
 
 ‡ Gross of costs 0.73: the news book turns over 88x a year. Over seeds 1 and 2 it scored 2.30 and 1.31.
 
@@ -93,6 +99,8 @@ What the table teaches:
 - **More model is not more signal.** On a 30-stock daily panel the networks (#9, #10) find
   little; early stopping halts #9 after a few epochs, and #10 explains returns (R² 0.30)
   without predicting them. News (#8) carries real signal that costs and a day's delay erase.
+  The RL agent (#12) memorises daily data; on weekly decisions it learns a planted trend but
+  loses to a one-line momentum rule.
 
 ![pairs equity](strategies/pairs-coint/figures/synthetic_plus_equity.png)
 
@@ -120,7 +128,7 @@ with a signal and 1.32 without one. After a 12-config sweep, the DSR is 0.56.
 - [x] **Phase 3: Core strategies:** #2–#7, models, portfolio-risk, risk screen (`RISK`, F4)
 - [x] **Phase 4: Robustness:** module, `ROBUST` screen (F5), [write-up](docs/robustness.md) (adversarial text stress waits for #8)
 - [x] **Phase 5: Advanced strategies:** #8 news sentiment (+ adversarial text tests), #9 deep learning, #10 conditional autoencoder (`dl` extra)
-- [ ] Phase 5 stretch: #11 synthetic data (TimeGAN-style), #12 deep RL agent
+- [x] **Phase 5 stretch:** #11 synthetic histories (block bootstrap, TimeGAN) for stress tests, #12 Double-DQN agent
 - [ ] Phase 6: fundamental-pitch, terminal polish
 
 ## Layout

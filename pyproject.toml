@@ -21,8 +21,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Deep-learning strategies (#9, #10). Optional: `uv sync --extra dl`. Torch is BSD-3.
-dl = ["torch>=2.2"]
+# Deep-learning strategies (#9-#12). Optional: `uv sync --extra dl`. Torch BSD-3, gymnasium MIT.
+dl = ["torch>=2.2", "gymnasium>=1.0"]
 
 [project.scripts]
 qs-terminal = "quantskills.terminal.app:main"

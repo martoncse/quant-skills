@@ -24,6 +24,10 @@ for checking that a method recovers a planted signal and finds nothing in noise.
   `attach_news(prices, news)` puts them in `prices.attrs["news"]`; strategies read them
   with `news_until(data)`, which cuts at the data's last date.
   `synthetic_prices_with_news(seed)` = the synthetic-plus panel with headlines.
+- `stylized_prices(n_assets, n_days, seed)`: GARCH volatility + Student-t shocks (fat tails,
+  volatility clustering), no alpha: a fair test bed for return generators (#11).
+- `trend_regime_prices(seed, drift, switch)`: one asset whose drift flips sign in persistent
+  regimes; returns `(panel, regime)`. A positive control for trend-following learners (#12).
 - Output convention (checked by `validate_prices`):
   - index `MultiIndex(date, ticker)`, dates tz-naive, sorted ascending, no duplicates
   - columns `open, high, low, close, volume`; prices split/dividend adjusted

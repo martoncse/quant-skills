@@ -14,7 +14,7 @@ from quantskills.data.news import (
     synthetic_news,
     synthetic_prices_with_news,
 )
-from quantskills.data.synthetic import synthetic_prices
+from quantskills.data.synthetic import stylized_prices, synthetic_prices, trend_regime_prices
 from quantskills.data.universe import EXAMPLE_LARGE_CAPS, survivorship_warning
 from quantskills.data.views import PERIODS, period_window, quote_detail, quote_table
 
@@ -30,10 +30,12 @@ __all__ = [
     "quote_detail",
     "quote_table",
     "survivorship_warning",
+    "stylized_prices",
     "synthetic_news",
     "synthetic_prices",
     "synthetic_prices_with_news",
     "to_long",
     "to_wide",
+    "trend_regime_prices",
     "validate_prices",
 ]

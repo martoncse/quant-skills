@@ -28,7 +28,7 @@ without touching the hold-out (3.47 → 0.34).
 
 ![terminal robustness screen](img/terminal-robust.png)
 
-## Results: all ten strategies
+## Results: all eleven strategies
 
 `uv run python skills/robustness/scripts/robustness_report.py --all --figures`
 
@@ -44,6 +44,10 @@ without touching the hold-out (3.47 → 0.34).
 | 8 | `text-sentiment` | **RED** | 0.817 | 0.77 / 0.10 | 1.32 | 0.37 | 2.11 → 1.10 | -0.28 |
 | 9 | `dl-forecast` | **RED** | 0.595 | 0.65 / 0.31 | 1.18 | 0.94 | 0.58 → 0.73 | -0.24 |
 | 10 | `cond-autoencoder` | **RED** | 0.016 | 0.61 / 0.88 | — | — | 1.19 → -0.73 | -0.99 |
+| 12 | `rl-dqn` † | **RED** | 0.360 | 0.46 / 0.23 | — | — | 1.30 → 0.39 | -0.37 |
+
+† #12 was run separately (`--strategy rl-dqn --noise-seeds 1`, 3-config grid) because each
+check retrains the agent; the `--all` run covers #1–#10.
 
 PBO is shown with P(loss), the chance the in-sample winner loses money out of sample.
 "Kept" is the share of the walk-forward Sharpe left after the perturbation. The hold-out
@@ -180,6 +184,17 @@ learned "beats" and "misses" more than it learned negation, so paraphrase costs 
 third. Synonyms and typos barely move it, because context words ("guidance", "flagship
 product") still give the tone away. Real text is less tidy. Graded on the worst attack:
 green ≥ 0.75 kept, amber ≥ 0.4.
+
+### Synthetic histories (#11)
+A different kind of check: rerun the strategy on many alternative histories with the same
+risk (`robustness/stress.py`). The stationary block bootstrap keeps fat tails and same-day
+correlations but breaks price levels and slow drift. Pairs trading beats all 20
+bootstrapped histories, because its edge is cointegrated *levels*. The factor strategies
+sit mid-distribution, because the bootstrap keeps each stock's average return, which is
+what short-sample momentum mostly captures. Full results, generator realism scores and
+TimeGAN's limits: [strategies/synthetic-data](../strategies/synthetic-data/README.md).
+
+![stress](img/robustness/stress_bootstrap.png)
 
 ### Calibration
 For models that output probabilities. Brier score, log loss, the Murphy decomposition
